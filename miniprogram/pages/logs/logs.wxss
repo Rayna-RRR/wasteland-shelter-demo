@@ -1,0 +1,13 @@
+.card + .card {
+  margin-top: 16rpx;
+}
+
+.log-card {
+  box-sizing: border-box;
+  margin-bottom: 16rpx;
+  padding: 22rpx 24rpx;
+  border: 1rpx solid #d7cbbd;
+  border-left: 6rpx solid #7d8f83;
+  border-radius: 8rpx;
+  background: #fffdf7;
+}

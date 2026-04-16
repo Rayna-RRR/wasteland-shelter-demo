@@ -1,0 +1,156 @@
+<view class="page">
+  <view class="header">
+    <text class="title">值勤调度</text>
+    <text class="subtitle">安排幸存者任务</text>
+  </view>
+
+  <view class="section">
+    <text class="section-title">当前资源</text>
+    <view class="resource-grid">
+      <view class="resource-item">
+        <text class="resource-label">食物</text>
+        <text class="resource-value">{{resources.food}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">电力</text>
+        <text class="resource-value">{{resources.power}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">材料</text>
+        <text class="resource-value">{{resources.materials}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">招募券</text>
+        <text class="resource-value">{{resources.premium_currency}}</text>
+      </view>
+    </view>
+    <view wx:if="{{loadingResources}}" class="message-card">
+      <text class="muted">资源刷新中...</text>
+    </view>
+  </view>
+
+  <view wx:if="{{errorMessage}}" class="section">
+    <view class="message-card">
+      <text class="muted">{{errorMessage}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{selectedSurvivor}}" class="section">
+    <text class="section-title">当前选择</text>
+    <view class="card selected-duty-card">
+      <view class="survivor-heading">
+        <text class="entity-title">{{selectedSurvivor.name}}</text>
+        <text class="{{selectedSurvivor.stateTagClass}}">{{selectedSurvivor.stateTag}}</text>
+      </view>
+      <text class="field-row">稀有度：{{selectedSurvivor.rarity}}</text>
+      <text class="field-row">职业：{{selectedSurvivor.role}}</text>
+      <text wx:if="{{selectedSurvivor.personalityLabel}}" class="field-row">性格：{{selectedSurvivor.personalityLabel}}</text>
+      <text wx:if="{{selectedSurvivor.injuredTag}}" class="field-row">伤情：{{selectedSurvivor.injuredTag}}</text>
+      <view class="state-panel">
+        <view class="state-row">
+          <text class="state-label">疲劳</text>
+          <text class="{{selectedSurvivor.fatigueClass}}">{{selectedSurvivor.fatigue}}</text>
+        </view>
+        <view class="state-row">
+          <text class="state-label">健康</text>
+          <text class="{{selectedSurvivor.healthClass}}">{{selectedSurvivor.health}}</text>
+        </view>
+      </view>
+      <view class="duty-button-list">
+        <button
+          class="duty-button rest-button"
+          size="mini"
+          bindtap="restSurvivor"
+          loading="{{assigning}}"
+          disabled="{{assigning}}"
+        >休整</button>
+        <button
+          wx:for="{{dutyTypes}}"
+          wx:for-item="duty"
+          wx:key="type"
+          class="duty-button"
+          size="mini"
+          data-duty-type="{{duty.type}}"
+          bindtap="assignDuty"
+          loading="{{assigning}}"
+          disabled="{{assigning}}"
+        >{{duty.label}}</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{dutyResult}}" class="section">
+    <text class="section-title">值勤结果</text>
+    <view class="card result-card">
+      <text class="entity-title">{{dutyResult.survivorName}}完成{{dutyResult.dutyLabel}}</text>
+      <text wx:if="{{dutyResult.personalityLabel}}" class="field-row">性格：{{dutyResult.personalityLabel}}</text>
+      <text wx:if="{{dutyResult.signatureLine}}" class="field-row">档案：{{dutyResult.signatureLine}}</text>
+      <text wx:if="{{dutyResult.injuredTag}}" class="field-row">伤情：{{dutyResult.injuredTag}}</text>
+      <text class="field-row">{{dutyResult.resultText}}</text>
+      <text class="field-row">食物：{{dutyResult.foodChange}}</text>
+      <text class="field-row">电力：{{dutyResult.powerChange}}</text>
+      <text class="field-row">材料：{{dutyResult.materialsChange}}</text>
+      <view class="state-panel">
+        <text class="{{dutyResult.stateTagClass}}">{{dutyResult.stateTag}}</text>
+        <view class="state-row">
+          <text class="state-label">疲劳</text>
+          <text class="{{dutyResult.fatigueClass}}">{{dutyResult.fatigue}}</text>
+        </view>
+        <view class="state-row">
+          <text class="state-label">健康</text>
+          <text class="{{dutyResult.healthClass}}">{{dutyResult.health}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">幸存者列表</text>
+    <view wx:if="{{loadingSurvivors}}" class="card">
+      <text class="muted">幸存者加载中...</text>
+    </view>
+    <block wx:elif="{{survivors.length}}">
+      <view
+        wx:for="{{survivors}}"
+        wx:for-item="survivor"
+        wx:key="id"
+        class="{{survivor.cardClass}}"
+        data-survivor-id="{{survivor.id}}"
+        bindtap="selectSurvivor"
+      >
+        <view class="survivor-heading">
+          <text class="entity-title">{{survivor.name}}</text>
+          <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
+        </view>
+        <text class="field-row">稀有度：{{survivor.rarity}}</text>
+        <text class="field-row">职业：{{survivor.role}}</text>
+        <text class="field-row">心情：{{survivor.mood}}</text>
+        <text wx:if="{{survivor.personalityLabel}}" class="field-row">性格：{{survivor.personalityLabel}}</text>
+        <text wx:if="{{survivor.signatureLine}}" class="field-row">档案：{{survivor.signatureLine}}</text>
+        <text wx:if="{{survivor.injuredTag}}" class="field-row">伤情：{{survivor.injuredTag}}</text>
+        <view class="state-panel">
+          <view class="state-row">
+            <text class="state-label">疲劳</text>
+            <text class="{{survivor.fatigueClass}}">{{survivor.fatigue}}</text>
+          </view>
+          <view class="state-row">
+            <text class="state-label">健康</text>
+            <text class="{{survivor.healthClass}}">{{survivor.health}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="card">
+      <text class="muted">暂无幸存者数据，请先前往招募页面</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">快速前往</text>
+    <view class="nav-list">
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/home/home" open-type="switchTab">返回首页</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/gacha/gacha" open-type="switchTab">幸存者招募</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/logs/logs" open-type="switchTab">查看日志</navigator>
+    </view>
+  </view>
+</view>

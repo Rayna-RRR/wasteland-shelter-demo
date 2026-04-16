@@ -1,0 +1,119 @@
+.survivor-card {
+  box-sizing: border-box;
+  margin-bottom: 18rpx;
+  padding: 22rpx 24rpx;
+  border: 1rpx solid #d7cbbd;
+  border-left: 6rpx solid #7d8f83;
+  border-radius: 8rpx;
+  background: #fffdf7;
+}
+
+.survivor-card--selected {
+  border-color: #1f6f68;
+  border-left-color: #1f6f68;
+  background: #f0faf7;
+}
+
+.survivor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.survivor-heading .entity-title {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.state-panel {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid #e2d6c6;
+  border-radius: 8rpx;
+  background: #f8f4ea;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44rpx;
+}
+
+.state-row + .state-row {
+  margin-top: 10rpx;
+}
+
+.state-label {
+  color: #6d6257;
+  font-size: 26rpx;
+}
+
+.state-value {
+  color: #263238;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.state-value--warning {
+  color: #9a650f;
+}
+
+.state-value--danger {
+  color: #b5382e;
+}
+
+.state-tag {
+  display: inline-block;
+  box-sizing: border-box;
+  min-height: 42rpx;
+  padding: 6rpx 14rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 30rpx;
+  white-space: nowrap;
+}
+
+.state-tag--good {
+  background: #e7f3ed;
+  color: #1f6f4f;
+}
+
+.state-tag--warning {
+  background: #fff1d8;
+  color: #8a5a0c;
+}
+
+.state-tag--danger {
+  background: #ffe4df;
+  color: #a12f28;
+}
+
+.duty-button-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.duty-button {
+  margin: 0;
+  border: 1rpx solid #c8d8d2;
+  border-radius: 8rpx;
+  background: #eef6f3;
+  color: #1f524c;
+  font-size: 26rpx;
+}
+
+.duty-button[disabled] {
+  background: #e2e8e6;
+  color: #7b8986;
+}
+
+.rest-button {
+  border-color: #d9c5a6;
+  background: #fff7e6;
+  color: #74511e;
+}

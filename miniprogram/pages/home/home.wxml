@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="header">
+    <text class="title">废土避难所</text>
+    <text class="subtitle">资源总览</text>
+  </view>
+
+  <view class="section">
+    <text class="section-title">当前资源</text>
+    <view wx:if="{{loading}}" class="message-card">
+      <text class="muted">资源加载中...</text>
+    </view>
+    <view wx:elif="{{errorMessage}}" class="message-card">
+      <text class="muted">{{errorMessage}}</text>
+    </view>
+    <view class="resource-grid">
+      <view class="resource-item">
+        <text class="resource-label">食物</text>
+        <text class="resource-value">{{resources.food}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">电力</text>
+        <text class="resource-value">{{resources.power}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">材料</text>
+        <text class="resource-value">{{resources.materials}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">招募券</text>
+        <text class="resource-value">{{resources.premium_currency}}</text>
+      </view>
+    </view>
+    <button class="action-button" bindtap="loadResources" loading="{{loading}}" disabled="{{loading}}">刷新资源</button>
+  </view>
+
+  <view wx:if="{{offerVisible || offerResultMessage || offerErrorMessage}}" class="section">
+    <text class="section-title">补给室来讯</text>
+    <view wx:if="{{offerVisible}}" class="offer-card">
+      <view class="offer-topline">
+        <text class="offer-kicker">避难所事件</text>
+        <text class="offer-badge">短时开放</text>
+      </view>
+      <text class="offer-title">{{offer.title}}</text>
+      <text class="offer-copy">{{offer.subtitle}}</text>
+      <text class="offer-reason">当前压力：{{offerTriggerLabel}}</text>
+      <view class="offer-reward-grid">
+        <view wx:for="{{offerRewardRows}}" wx:key="label" class="offer-reward">
+          <text class="offer-reward-label">{{item.label}}</text>
+          <text class="offer-reward-value">{{item.value}}</text>
+        </view>
+      </view>
+      <view class="offer-actions">
+        <button class="offer-button-secondary" bindtap="closeEmergencyOffer" disabled="{{offerPurchasing}}">暂缓处理</button>
+        <button class="offer-button-primary" bindtap="purchaseEmergencyOffer" loading="{{offerPurchasing}}" disabled="{{offerPurchasing}}">启用协议 · {{offer.price_label}}</button>
+      </view>
+    </view>
+    <view wx:if="{{offerErrorMessage}}" class="message-card">
+      <text class="muted">{{offerErrorMessage}}</text>
+    </view>
+    <view wx:if="{{offerResultMessage}}" class="message-card">
+      <text class="muted">{{offerResultMessage}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">快速前往</text>
+    <view class="nav-list">
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/gacha/gacha" open-type="switchTab">幸存者招募</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/duty/duty" open-type="switchTab">值勤调度</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/logs/logs" open-type="switchTab">行动日志</navigator>
+    </view>
+  </view>
+</view>

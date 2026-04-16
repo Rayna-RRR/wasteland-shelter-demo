@@ -1,0 +1,67 @@
+<view class="page">
+  <view class="header">
+    <text class="title">幸存者招募</text>
+    <text class="subtitle">招募舱待命</text>
+  </view>
+
+  <view class="section">
+    <text class="section-title">当前资源</text>
+    <view class="resource-grid">
+      <view class="resource-item">
+        <text class="resource-label">食物</text>
+        <text class="resource-value">{{resources.food}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">电力</text>
+        <text class="resource-value">{{resources.power}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">材料</text>
+        <text class="resource-value">{{resources.materials}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">招募券</text>
+        <text class="resource-value">{{resources.premium_currency}}</text>
+      </view>
+    </view>
+    <view wx:if="{{loadingResources}}" class="message-card">
+      <text class="muted">资源刷新中...</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <button class="action-button" bindtap="pullSurvivor" loading="{{pulling}}" disabled="{{pulling}}">进行一次招募</button>
+    <view wx:if="{{errorMessage}}" class="message-card">
+      <text class="muted">{{errorMessage}}</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">招募结果</text>
+    <view wx:if="{{survivor}}" class="card result-card">
+      <text class="entity-title">{{survivor.name}}</text>
+      <text wx:if="{{survivor.duplicate}}" class="field-row">结果：重复成员</text>
+      <text wx:if="{{survivor.compensationText}}" class="field-row">补偿：{{survivor.compensationText}}</text>
+      <text wx:if="{{survivor.gachaIntroLine}}" class="field-row">入队：{{survivor.gachaIntroLine}}</text>
+      <text class="field-row">稀有度：{{survivor.rarity}}</text>
+      <text class="field-row">职业：{{survivor.role}}</text>
+      <text class="field-row">状态：{{survivor.mood}}</text>
+      <text wx:if="{{survivor.currentStateTag}}" class="field-row">当前状态：{{survivor.currentStateTag}}</text>
+      <text wx:if="{{survivor.injuredTag}}" class="field-row">伤情：{{survivor.injuredTag}}</text>
+      <text wx:if="{{survivor.personalityLabel}}" class="field-row">性格：{{survivor.personalityLabel}}</text>
+      <text wx:if="{{survivor.signatureLine}}" class="field-row">档案：{{survivor.signatureLine}}</text>
+    </view>
+    <view wx:else class="card">
+      <text class="muted">暂无招募结果</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">快速前往</text>
+    <view class="nav-list">
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/home/home" open-type="switchTab">返回首页</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/duty/duty" open-type="switchTab">安排值勤</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/logs/logs" open-type="switchTab">查看日志</navigator>
+    </view>
+  </view>
+</view>

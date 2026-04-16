@@ -1,0 +1,38 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/gacha/gacha",
+    "pages/duty/duty",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "navigationBarTitleText": "废土避难所",
+    "navigationBarBackgroundColor": "#263238",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f4f1e8"
+  },
+  "tabBar": {
+    "color": "#6b6358",
+    "selectedColor": "#1f6f68",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/gacha/gacha",
+        "text": "招募"
+      },
+      {
+        "pagePath": "pages/duty/duty",
+        "text": "值勤"
+      },
+      {
+        "pagePath": "pages/logs/logs",
+        "text": "日志"
+      }
+    ]
+  }
+}

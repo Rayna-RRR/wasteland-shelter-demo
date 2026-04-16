@@ -1,0 +1,56 @@
+<view class="page">
+  <view class="header">
+    <text class="title">行动日志</text>
+    <text class="subtitle">记录避难所行动</text>
+  </view>
+
+  <view class="section">
+    <text class="section-title">招募日志</text>
+    <view wx:if="{{loadingGachaLogs}}" class="card">
+      <text class="muted">招募日志加载中...</text>
+    </view>
+    <view wx:elif="{{gachaErrorMessage}}" class="message-card">
+      <text class="muted">{{gachaErrorMessage}}</text>
+    </view>
+    <block wx:elif="{{gachaLogs.length}}">
+      <view wx:for="{{gachaLogs}}" wx:key="id" class="log-card">
+        <text class="entity-title">{{item.survivor_name}}（{{item.rarity}}）</text>
+        <text class="field-row">职业：{{item.role}}</text>
+        <text class="field-row">时间：{{item.created_at}}</text>
+      </view>
+    </block>
+    <view wx:else class="card">
+      <text class="muted">暂无招募日志</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">值勤日志</text>
+    <view wx:if="{{loadingDutyLogs}}" class="card">
+      <text class="muted">值勤日志加载中...</text>
+    </view>
+    <view wx:elif="{{dutyErrorMessage}}" class="message-card">
+      <text class="muted">{{dutyErrorMessage}}</text>
+    </view>
+    <block wx:elif="{{dutyLogs.length}}">
+      <view wx:for="{{dutyLogs}}" wx:key="id" class="log-card">
+        <text class="entity-title">{{item.survivor_name}}：{{item.duty_label}}</text>
+        <text class="field-row">{{item.result_text}}</text>
+        <text class="field-row">食物：{{item.food_change_text}}　电力：{{item.power_change_text}}　材料：{{item.materials_change_text}}</text>
+        <text class="field-row">时间：{{item.created_at}}</text>
+      </view>
+    </block>
+    <view wx:else class="card">
+      <text class="muted">暂无值勤日志</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <text class="section-title">快速前往</text>
+    <view class="nav-list">
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/home/home" open-type="switchTab">返回首页</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/gacha/gacha" open-type="switchTab">幸存者招募</navigator>
+      <navigator class="nav-card" hover-class="nav-card--active" url="/pages/duty/duty" open-type="switchTab">安排值勤</navigator>
+    </view>
+  </view>
+</view>
