@@ -46,6 +46,28 @@
   </view>
 
   <view class="section">
+    <text class="section-title">应急补给日志</text>
+    <view wx:if="{{loadingOfferLogs}}" class="card">
+      <text class="muted">补给日志加载中...</text>
+    </view>
+    <view wx:elif="{{offerErrorMessage}}" class="message-card">
+      <text class="muted">{{offerErrorMessage}}</text>
+    </view>
+    <block wx:elif="{{offerLogs.length}}">
+      <view wx:for="{{offerLogs}}" wx:key="id" class="log-card">
+        <text class="entity-title">{{item.action_type}}</text>
+        <text class="field-row">压力来源：{{item.trigger_reason}}</text>
+        <text class="field-row">资源快照：{{item.resource_snapshot_text}}</text>
+        <text class="field-row">幸存者数量：{{item.survivor_count_text}}</text>
+        <text class="field-row">时间：{{item.created_at}}</text>
+      </view>
+    </block>
+    <view wx:else class="card">
+      <text class="muted">暂无补给日志</text>
+    </view>
+  </view>
+
+  <view class="section">
     <text class="section-title">快速前往</text>
     <view class="nav-list">
       <navigator class="nav-card" hover-class="nav-card--active" url="/pages/home/home" open-type="switchTab">返回首页</navigator>

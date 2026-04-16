@@ -15,14 +15,32 @@ function formatDutyLog(row) {
   }
 }
 
+function formatOfferLog(row) {
+  return {
+    id: row.id,
+    action_type: format.getOfferEventLabel(row.event_type),
+    event_type: row.event_type,
+    trigger_reason: format.getTriggerReasonLabel(row.trigger_reason),
+    resource_snapshot_text: (
+      `食物 ${row.food_before} / 电力 ${row.power_before} / ` +
+      `材料 ${row.materials_before} / 招募券 ${row.premium_currency_before}`
+    ),
+    survivor_count_text: row.survivor_count === undefined ? "--" : row.survivor_count,
+    created_at: row.created_at
+  }
+}
+
 Page({
   data: {
     loadingGachaLogs: false,
     loadingDutyLogs: false,
+    loadingOfferLogs: false,
     gachaErrorMessage: "",
     dutyErrorMessage: "",
+    offerErrorMessage: "",
     gachaLogs: [],
-    dutyLogs: []
+    dutyLogs: [],
+    offerLogs: []
   },
 
   onShow() {
@@ -32,6 +50,7 @@ Page({
   loadLogs() {
     this.loadGachaLogs()
     this.loadDutyLogs()
+    this.loadOfferLogs()
   },
 
   loadGachaLogs() {
@@ -92,6 +111,37 @@ Page({
       .finally(() => {
         this.setData({
           loadingDutyLogs: false
+        })
+      })
+  },
+
+  loadOfferLogs() {
+    this.setData({
+      loadingOfferLogs: true,
+      offerErrorMessage: ""
+    })
+
+    api.getEmergencyOfferLogs()
+      .then((res) => {
+        if (res.statusCode === 200 && Array.isArray(res.data)) {
+          this.setData({
+            offerLogs: res.data.map(formatOfferLog)
+          })
+          return
+        }
+
+        this.setData({
+          offerErrorMessage: "补给日志加载失败"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          offerErrorMessage: "无法连接后端服务"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          loadingOfferLogs: false
         })
       })
   }

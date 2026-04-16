@@ -45,7 +45,9 @@ function formatResources(row) {
     food: data.food === undefined ? "--" : data.food,
     power: data.power === undefined ? "--" : data.power,
     materials: data.materials === undefined ? "--" : data.materials,
-    premium_currency: data.premium_currency === undefined ? "--" : data.premium_currency
+    premium_currency: data.premium_currency === undefined ? "--" : data.premium_currency,
+    power_shortage: Boolean(data.power_shortage),
+    power_deficit: data.power_deficit || 0
   }
 }
 
@@ -57,8 +59,12 @@ const offerEventLabels = {
 
 const triggerReasonLabels = {
   food_pressure: "食物压力",
+  power_shortage: "电力短缺",
   power_pressure: "电力压力",
   materials_pressure: "材料压力",
+  combined_resource_pressure: "多项资源压力",
+  team_state_pressure: "队伍状态压力",
+  low_efficiency_pressure: "行动效率压力",
   shelter_pressure: "避难所压力"
 }
 

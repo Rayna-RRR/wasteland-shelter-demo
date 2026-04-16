@@ -30,7 +30,10 @@
         <text class="resource-value">{{resources.premium_currency}}</text>
       </view>
     </view>
-    <button class="action-button" bindtap="loadResources" loading="{{loading}}" disabled="{{loading}}">刷新资源</button>
+    <view wx:if="{{resources.power_shortage}}" class="message-card">
+      <text class="muted">电力短缺：避难所已进入低功耗运行。</text>
+    </view>
+    <button class="action-button" bindtap="refreshHome" loading="{{loading}}" disabled="{{loading}}">刷新资源</button>
   </view>
 
   <view wx:if="{{offerVisible || offerResultMessage || offerErrorMessage}}" class="section">
@@ -38,7 +41,7 @@
     <view wx:if="{{offerVisible}}" class="offer-card">
       <view class="offer-topline">
         <text class="offer-kicker">避难所事件</text>
-        <text class="offer-badge">短时开放</text>
+        <text class="offer-badge">{{offer.urgency_label}}</text>
       </view>
       <text class="offer-title">{{offer.title}}</text>
       <text class="offer-copy">{{offer.subtitle}}</text>

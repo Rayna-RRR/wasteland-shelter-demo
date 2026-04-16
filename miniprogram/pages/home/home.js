@@ -30,7 +30,11 @@ Page({
     offerRewardRows: []
   },
 
-  onLoad() {
+  onShow() {
+    this.refreshHome()
+  },
+
+  refreshHome() {
     this.loadResources()
     this.loadEmergencyOffer()
   },

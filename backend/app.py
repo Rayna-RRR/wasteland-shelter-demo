@@ -92,6 +92,38 @@ DUTY_NARRATIVE_FOCUS = {
 
 DUTY_TYPES = ["scavenge", "generate_power", "cook", "guard"]
 GACHA_DUPLICATE_MATERIAL_COMPENSATION = 8
+DUTY_OPERATING_COSTS = {
+    "scavenge": {
+        "food": 0,
+        "power": 2,
+        "materials": 0
+    },
+    "generate_power": {
+        "food": 1,
+        "power": 0,
+        "materials": 2
+    },
+    "cook": {
+        "food": 0,
+        "power": 1,
+        "materials": 0
+    },
+    "guard": {
+        "food": 1,
+        "power": 1,
+        "materials": 1
+    }
+}
+SHELTER_UPKEEP_DUTY_INTERVAL = 3
+SHELTER_UPKEEP_COSTS = {
+    "food": 6,
+    "power": 6,
+    "materials": 5
+}
+SHELTER_UPKEEP_FATIGUE_PENALTY = 6
+SHELTER_UPKEEP_HEALTH_PENALTY = 2
+PLAYER_RESOURCE_KEYS = ("food", "power", "materials")
+POWER_SHORTAGE_FATIGUE_PENALTY = 4
 FATIGUE_INCREASE_BY_DUTY = {
     "scavenge": 18,
     "generate_power": 14,
@@ -101,12 +133,29 @@ FATIGUE_INCREASE_BY_DUTY = {
 HIGH_RISK_DUTIES = ["scavenge", "guard"]
 EMERGENCY_OFFER_FATIGUE_RECOVERY = 15
 EMERGENCY_OFFER_HEALTH_RECOVERY = 5
+RESOURCE_CRITICAL_THRESHOLDS = {
+    "food": 60,
+    "power": 60,
+    "materials": 25
+}
+RESOURCE_WARNING_THRESHOLDS = {
+    "food": 75,
+    "power": 75,
+    "materials": 35
+}
+TEAM_STRESS_FATIGUE_THRESHOLD = 70
+TEAM_STRESS_HEALTH_THRESHOLD = 60
+TEAM_CRITICAL_HEALTH_THRESHOLD = 30
+RECENT_DUTY_LOG_LIMIT = 3
+LOW_EFFICIENCY_TRIGGER_COUNT = 2
+LOW_EFFICIENCY_TOTAL_CHANGE_THRESHOLD = 2
 
 EMERGENCY_OFFER_ID = "emergency_supply_v1"
 EMERGENCY_OFFER = {
     "offer_id": EMERGENCY_OFFER_ID,
     "title": "战备应急补给协议",
     "subtitle": "避难所监测到补给压力，限时开放一次战备补给。",
+    "urgency_label": "短时开放",
     "price_label": "¥6",
     "rewards": {
         "premium_currency": 3,
@@ -115,12 +164,125 @@ EMERGENCY_OFFER = {
         "materials": 25
     }
 }
+EMERGENCY_OFFER_COPY_BY_TRIGGER = {
+    "power_shortage": {
+        "title": "低功耗应急补给",
+        "subtitle": "电力已经触底，避难所正在压缩照明和过滤负载。补给室建议先恢复基础供能。",
+        "urgency_label": "断电处置"
+    },
+    "power_pressure": {
+        "title": "电力预警补给",
+        "subtitle": "电力储备低于安全线，发电排班正在挤压其他值勤。补给室准备了稳定供能包。",
+        "urgency_label": "电力预警"
+    },
+    "food_pressure": {
+        "title": "口粮应急补给",
+        "subtitle": "食物库存已经进入危险区，队伍恢复和日常值勤都会被拖慢。补给室开放一次口粮支援。",
+        "urgency_label": "口粮告急"
+    },
+    "materials_pressure": {
+        "title": "维修材料补给",
+        "subtitle": "材料储备低于维护线，发电、守卫和例行检修都会受影响。补给室建议补足基础耗材。",
+        "urgency_label": "材料告急"
+    },
+    "combined_resource_pressure": {
+        "title": "综合维持补给",
+        "subtitle": "多项资源同时接近警戒线，避难所需要一次稳定补给来撑过当前轮值。",
+        "urgency_label": "多线压力"
+    },
+    "team_state_pressure": {
+        "title": "医疗休整补给",
+        "subtitle": "队伍疲劳或伤情已经累积，继续硬撑会压低后续行动效率。补给室准备了恢复支援。",
+        "urgency_label": "队伍告急"
+    },
+    "low_efficiency_pressure": {
+        "title": "低效行动补给",
+        "subtitle": "最近值勤产出偏低，避难所运转效率正在下滑。补给室建议先稳住基础盘。",
+        "urgency_label": "效率下滑"
+    },
+    "shelter_pressure": {
+        "title": "避难所应急补给",
+        "subtitle": "避难所运转压力升高，补给室临时开放一次救援协议。",
+        "urgency_label": "避难所压力"
+    }
+}
 
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def clamp_resource_value(value):
+    return max(0, value)
+
+
+def normalize_player_resources(conn):
+    player = conn.execute(
+        "SELECT food, power, materials, premium_currency FROM player WHERE id = 1"
+    ).fetchone()
+
+    normalized = {}
+    repaired_deficit = {}
+
+    for resource_name in PLAYER_RESOURCE_KEYS:
+        current_value = player[resource_name]
+        normalized[resource_name] = clamp_resource_value(current_value)
+        repaired_deficit[resource_name] = max(0, -current_value)
+
+    normalized["premium_currency"] = player["premium_currency"]
+
+    if any(repaired_deficit.values()):
+        conn.execute(
+            """
+            UPDATE player
+            SET food = ?,
+                power = ?,
+                materials = ?
+            WHERE id = 1
+            """,
+            (
+                normalized["food"],
+                normalized["power"],
+                normalized["materials"]
+            )
+        )
+
+    return {
+        "player": normalized,
+        "repaired_deficit": repaired_deficit
+    }
+
+
+def build_resource_payload(player, power_deficit=0):
+    power = clamp_resource_value(player["power"])
+
+    return {
+        "food": clamp_resource_value(player["food"]),
+        "power": power,
+        "materials": clamp_resource_value(player["materials"]),
+        "premium_currency": player["premium_currency"],
+        "power_shortage": power <= 0,
+        "power_deficit": power_deficit
+    }
+
+
+def build_emergency_offer(trigger_reason=None):
+    offer = {
+        "offer_id": EMERGENCY_OFFER["offer_id"],
+        "title": EMERGENCY_OFFER["title"],
+        "subtitle": EMERGENCY_OFFER["subtitle"],
+        "urgency_label": EMERGENCY_OFFER["urgency_label"],
+        "price_label": EMERGENCY_OFFER["price_label"],
+        "rewards": dict(EMERGENCY_OFFER["rewards"])
+    }
+    copy = EMERGENCY_OFFER_COPY_BY_TRIGGER.get(trigger_reason)
+
+    if copy:
+        offer.update(copy)
+
+    return offer
 
 
 def survivor_name_exists(conn, name):
@@ -241,44 +403,158 @@ def build_duty_result_text(
     return f"{result_sentence} {flavor_sentence}"
 
 
-def get_emergency_trigger_reason(player, action_count):
-    if player["food"] <= 95:
+def get_resource_pressure_reason(player):
+    if player["power"] <= 0:
+        return "power_shortage"
+    if player["food"] <= RESOURCE_CRITICAL_THRESHOLDS["food"]:
         return "food_pressure"
-    if player["power"] <= 95:
+    if player["power"] <= RESOURCE_CRITICAL_THRESHOLDS["power"]:
         return "power_pressure"
-    if player["materials"] <= 45:
+    if player["materials"] <= RESOURCE_CRITICAL_THRESHOLDS["materials"]:
         return "materials_pressure"
-    if action_count >= 3:
-        return "shelter_pressure"
+
+    warning_count = 0
+    for key, threshold in RESOURCE_WARNING_THRESHOLDS.items():
+        if player[key] <= threshold:
+            warning_count += 1
+
+    if warning_count >= 2:
+        return "combined_resource_pressure"
+
     return None
 
 
-def get_emergency_offer_context(conn):
-    player = conn.execute(
-        "SELECT food, power, materials, premium_currency FROM player WHERE id = 1"
-    ).fetchone()
-    survivor_count = conn.execute(
-        "SELECT COUNT(*) AS count FROM survivors WHERE owned = 1"
-    ).fetchone()["count"]
-    gacha_count = conn.execute(
-        "SELECT COUNT(*) AS count FROM gacha_logs"
-    ).fetchone()["count"]
-    duty_count = conn.execute(
-        "SELECT COUNT(*) AS count FROM duty_logs"
-    ).fetchone()["count"]
-    purchased = conn.execute(
+def get_team_state_pressure_reason(conn):
+    rows = conn.execute(
+        """
+        SELECT fatigue, health
+        FROM survivors
+        WHERE owned = 1
+        """
+    ).fetchall()
+
+    if not rows:
+        return None
+
+    stressed_count = 0
+    critical_health_count = 0
+
+    for row in rows:
+        if row["health"] <= TEAM_CRITICAL_HEALTH_THRESHOLD:
+            critical_health_count += 1
+        if (
+            row["fatigue"] >= TEAM_STRESS_FATIGUE_THRESHOLD
+            or row["health"] <= TEAM_STRESS_HEALTH_THRESHOLD
+        ):
+            stressed_count += 1
+
+    if critical_health_count >= 1:
+        return "team_state_pressure"
+    if len(rows) >= 2 and stressed_count >= 2:
+        return "team_state_pressure"
+
+    return None
+
+
+def get_low_efficiency_pressure_reason(conn):
+    rows = conn.execute(
+        """
+        SELECT food_change, power_change, materials_change
+        FROM duty_logs
+        WHERE duty_type != 'rest'
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (RECENT_DUTY_LOG_LIMIT,)
+    ).fetchall()
+
+    if len(rows) < RECENT_DUTY_LOG_LIMIT:
+        return None
+
+    low_efficiency_count = 0
+    for row in rows:
+        total_change = (
+            row["food_change"]
+            + row["power_change"]
+            + row["materials_change"]
+        )
+        if total_change <= LOW_EFFICIENCY_TOTAL_CHANGE_THRESHOLD:
+            low_efficiency_count += 1
+
+    if low_efficiency_count >= LOW_EFFICIENCY_TRIGGER_COUNT:
+        return "low_efficiency_pressure"
+
+    return None
+
+
+def has_purchased_offer_for_trigger(conn, trigger_reason):
+    if not trigger_reason:
+        return False
+
+    return conn.execute(
         """
         SELECT id
         FROM offer_logs
-        WHERE offer_id = ? AND event_type = 'purchased'
+        WHERE offer_id = ?
+          AND event_type = 'purchased'
+          AND trigger_reason = ?
         LIMIT 1
         """,
-        (EMERGENCY_OFFER_ID,)
+        (EMERGENCY_OFFER_ID, trigger_reason)
     ).fetchone() is not None
 
-    action_count = gacha_count + duty_count
-    trigger_reason = get_emergency_trigger_reason(player, action_count)
-    active = survivor_count >= 1 and not purchased and trigger_reason is not None
+
+def is_offer_closed_for_current_pressure(conn, trigger_reason, player):
+    if not trigger_reason:
+        return False
+
+    closed = conn.execute(
+        """
+        SELECT food_before, power_before, materials_before
+        FROM offer_logs
+        WHERE offer_id = ?
+          AND event_type = 'closed'
+          AND trigger_reason = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (EMERGENCY_OFFER_ID, trigger_reason)
+    ).fetchone()
+
+    if not closed:
+        return False
+
+    return (
+        player["food"] == closed["food_before"]
+        and player["power"] == closed["power_before"]
+        and player["materials"] == closed["materials_before"]
+    )
+
+
+def get_emergency_offer_context(conn):
+    resource_state = normalize_player_resources(conn)
+    player = resource_state["player"]
+    survivor_count = conn.execute(
+        "SELECT COUNT(*) AS count FROM survivors WHERE owned = 1"
+    ).fetchone()["count"]
+
+    trigger_reason = (
+        get_resource_pressure_reason(player)
+        or get_team_state_pressure_reason(conn)
+        or get_low_efficiency_pressure_reason(conn)
+    )
+    purchased = has_purchased_offer_for_trigger(conn, trigger_reason)
+    close_suppressed = is_offer_closed_for_current_pressure(
+        conn,
+        trigger_reason,
+        player
+    )
+    active = (
+        survivor_count >= 1
+        and not purchased
+        and not close_suppressed
+        and trigger_reason is not None
+    )
 
     return {
         "active": active,
@@ -286,7 +562,8 @@ def get_emergency_offer_context(conn):
         "raw_trigger_reason": trigger_reason,
         "player": player,
         "survivor_count": survivor_count,
-        "purchased": purchased
+        "purchased": purchased,
+        "close_suppressed": close_suppressed
     }
 
 
@@ -360,6 +637,220 @@ def reduce_positive_change(value, multiplier):
     if value <= 0:
         return value
     return max(0, int(value * multiplier))
+
+
+def get_resource_change_key(resource_name):
+    return f"{resource_name}_change"
+
+
+def apply_player_resource_changes(conn, changes):
+    resource_state = normalize_player_resources(conn)
+    player = resource_state["player"]
+    updated = {}
+    actual_changes = {}
+    shortfall = {}
+
+    for resource_name in PLAYER_RESOURCE_KEYS:
+        change_key = get_resource_change_key(resource_name)
+        requested_change = changes.get(change_key, 0)
+        current_value = player[resource_name]
+        raw_next_value = current_value + requested_change
+        updated_value = clamp_resource_value(raw_next_value)
+
+        updated[resource_name] = updated_value
+        actual_changes[change_key] = updated_value - current_value
+        shortfall[resource_name] = max(0, -raw_next_value)
+
+    conn.execute(
+        """
+        UPDATE player
+        SET food = ?,
+            power = ?,
+            materials = ?
+        WHERE id = 1
+        """,
+        (
+            updated["food"],
+            updated["power"],
+            updated["materials"]
+        )
+    )
+
+    return {
+        "actual_changes": actual_changes,
+        "shortfall": shortfall,
+        "updated": updated,
+        "repaired_deficit": resource_state["repaired_deficit"]
+    }
+
+
+def apply_duty_operating_cost(changes, duty_type):
+    costs = DUTY_OPERATING_COSTS.get(duty_type, {})
+    adjusted = dict(changes)
+
+    for resource_name, amount in costs.items():
+        adjusted[get_resource_change_key(resource_name)] -= amount
+
+    return adjusted, costs
+
+
+def format_resource_cost_text(costs):
+    labels = {
+        "food": "食物",
+        "power": "电力",
+        "materials": "材料"
+    }
+    parts = []
+
+    for resource_name in ("food", "power", "materials"):
+        amount = costs.get(resource_name, 0)
+        if amount > 0:
+            parts.append(f"{labels[resource_name]} -{amount}")
+
+    return "，".join(parts)
+
+
+def get_completed_duty_count(conn):
+    return conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM duty_logs
+        WHERE duty_type != 'rest'
+        """
+    ).fetchone()["count"]
+
+
+def apply_shelter_upkeep(conn):
+    player = normalize_player_resources(conn)["player"]
+
+    paid = {}
+    shortfall = {}
+
+    for resource_name, cost in SHELTER_UPKEEP_COSTS.items():
+        available = max(0, player[resource_name])
+        paid_amount = min(available, cost)
+        paid[resource_name] = paid_amount
+        shortfall[resource_name] = cost - paid_amount
+
+    conn.execute(
+        """
+        UPDATE player
+        SET food = food - ?,
+            power = power - ?,
+            materials = materials - ?
+        WHERE id = 1
+        """,
+        (paid["food"], paid["power"], paid["materials"])
+    )
+
+    fully_paid = sum(shortfall.values()) == 0
+    team_penalty = {
+        "applied": False,
+        "affected_survivor_count": 0,
+        "fatigue_change": 0,
+        "health_change": 0
+    }
+
+    if not fully_paid:
+        rows = conn.execute(
+            """
+            SELECT id, fatigue, health
+            FROM survivors
+            WHERE owned = 1
+            """
+        ).fetchall()
+
+        for row in rows:
+            conn.execute(
+                """
+                UPDATE survivors
+                SET fatigue = ?,
+                    health = ?
+                WHERE id = ?
+                """,
+                (
+                    clamp_state_value(
+                        row["fatigue"] + SHELTER_UPKEEP_FATIGUE_PENALTY
+                    ),
+                    clamp_state_value(
+                        row["health"] - SHELTER_UPKEEP_HEALTH_PENALTY
+                    ),
+                    row["id"]
+                )
+            )
+
+        team_penalty = {
+            "applied": True,
+            "affected_survivor_count": len(rows),
+            "fatigue_change": SHELTER_UPKEEP_FATIGUE_PENALTY,
+            "health_change": -SHELTER_UPKEEP_HEALTH_PENALTY
+        }
+
+    return {
+        "triggered": True,
+        "cost": SHELTER_UPKEEP_COSTS,
+        "paid": paid,
+        "shortfall": shortfall,
+        "fully_paid": fully_paid,
+        "team_penalty": team_penalty
+    }
+
+
+def build_shelter_upkeep_text(upkeep):
+    if not upkeep or not upkeep.get("triggered"):
+        return ""
+
+    paid_text = format_resource_cost_text(upkeep["paid"])
+    if upkeep["fully_paid"]:
+        return f"避难所例行维护完成，维护成本：{paid_text}。"
+
+    shortfall_text = format_resource_cost_text(upkeep["shortfall"])
+    return (
+        f"避难所例行维护未能足额支付，缺口：{shortfall_text}，"
+        "全员疲劳上升，健康小幅下降。"
+    )
+
+
+def apply_power_shortage_penalty(conn):
+    rows = conn.execute(
+        """
+        SELECT id, fatigue
+        FROM survivors
+        WHERE owned = 1
+        """
+    ).fetchall()
+
+    for row in rows:
+        conn.execute(
+            """
+            UPDATE survivors
+            SET fatigue = ?
+            WHERE id = ?
+            """,
+            (
+                clamp_state_value(
+                    row["fatigue"] + POWER_SHORTAGE_FATIGUE_PENALTY
+                ),
+                row["id"]
+            )
+        )
+
+    return {
+        "applied": len(rows) > 0,
+        "affected_survivor_count": len(rows),
+        "fatigue_change": POWER_SHORTAGE_FATIGUE_PENALTY,
+        "health_change": 0
+    }
+
+
+def build_power_shortage_text(power_shortfall):
+    if power_shortfall <= 0:
+        return ""
+
+    return (
+        f"电力不足，缺口 {power_shortfall} 点，"
+        "避难所转入低功耗运行，全员疲劳上升。"
+    )
 
 
 def apply_survivor_state_penalty(changes, survivor):
@@ -436,6 +927,10 @@ def roll_survivor():
 
 def build_state_aware_duty_result(survivor, duty_type, changes, text_builder):
     adjusted_changes, output_warnings = apply_survivor_state_penalty(changes, survivor)
+    final_changes, operating_cost = apply_duty_operating_cost(
+        adjusted_changes,
+        duty_type
+    )
     state_change = resolve_survivor_state_change(survivor, duty_type)
     result_sentence = text_builder(adjusted_changes)
     result_text = build_duty_result_text(
@@ -445,12 +940,16 @@ def build_state_aware_duty_result(survivor, duty_type, changes, text_builder):
         output_warnings,
         state_change
     )
+    operating_cost_text = format_resource_cost_text(operating_cost)
+    if operating_cost_text:
+        result_text = f"{result_text} 本次值勤运转成本：{operating_cost_text}。"
 
     return {
-        "food_change": adjusted_changes["food_change"],
-        "power_change": adjusted_changes["power_change"],
-        "materials_change": adjusted_changes["materials_change"],
+        "food_change": final_changes["food_change"],
+        "power_change": final_changes["power_change"],
+        "materials_change": final_changes["materials_change"],
         "result_text": result_text,
+        "operating_cost": operating_cost,
         "survivor_state": {
             "fatigue_change": state_change["fatigue_change"],
             "health_change": state_change["health_change"],
@@ -490,7 +989,7 @@ def resolve_duty_result(survivor, duty_type):
         changes = {
             "food_change": 0,
             "power_change": random.randint(5, 10) + bonus,
-            "materials_change": -random.randint(0, 2)
+            "materials_change": -random.randint(1, 3)
         }
         return build_state_aware_duty_result(
             survivor,
@@ -558,17 +1057,14 @@ def status():
 @app.route("/api/resources", methods=["GET"])
 def resources():
     conn = get_db_connection()
-    player = conn.execute(
-        "SELECT food, power, materials, premium_currency FROM player WHERE id = 1"
-    ).fetchone()
+    resource_state = normalize_player_resources(conn)
+    conn.commit()
     conn.close()
 
-    return jsonify({
-        "food": player["food"],
-        "power": player["power"],
-        "materials": player["materials"],
-        "premium_currency": player["premium_currency"]
-    })
+    return jsonify(build_resource_payload(
+        resource_state["player"],
+        resource_state["repaired_deficit"]["power"]
+    ))
 
 
 @app.route("/api/gacha", methods=["POST"])
@@ -725,6 +1221,8 @@ def duty():
             }
         }), 400
 
+    duty_action_count = get_completed_duty_count(conn) + 1
+    upkeep_due = duty_action_count % SHELTER_UPKEEP_DUTY_INTERVAL == 0
     result = resolve_duty_result(survivor, duty_type)
     survivor_state = result["survivor_state"]
 
@@ -742,20 +1240,70 @@ def duty():
         )
     )
 
-    conn.execute(
-        """
-        UPDATE player
-        SET food = food + ?,
-            power = power + ?,
-            materials = materials + ?
-        WHERE id = 1
-        """,
-        (
-            result["food_change"],
-            result["power_change"],
-            result["materials_change"]
+    resource_update = apply_player_resource_changes(conn, result)
+    for resource_name in PLAYER_RESOURCE_KEYS:
+        result[get_resource_change_key(resource_name)] = (
+            resource_update["actual_changes"][get_resource_change_key(resource_name)]
         )
-    )
+
+    upkeep = None
+    direct_power_shortfall = resource_update["shortfall"]["power"]
+    total_power_shortfall = direct_power_shortfall
+    if upkeep_due:
+        upkeep = apply_shelter_upkeep(conn)
+        for resource_name, paid_amount in upkeep["paid"].items():
+            result[get_resource_change_key(resource_name)] -= paid_amount
+
+        total_power_shortfall += upkeep["shortfall"]["power"]
+        upkeep_text = build_shelter_upkeep_text(upkeep)
+        if upkeep_text:
+            result["result_text"] = f"{result['result_text']} {upkeep_text}"
+
+        if upkeep["team_penalty"]["applied"]:
+            survivor_state["fatigue_change"] += (
+                upkeep["team_penalty"]["fatigue_change"]
+            )
+            survivor_state["health_change"] += (
+                upkeep["team_penalty"]["health_change"]
+            )
+            survivor_state["fatigue"] = clamp_state_value(
+                survivor_state["fatigue"]
+                + upkeep["team_penalty"]["fatigue_change"]
+            )
+            survivor_state["health"] = clamp_state_value(
+                survivor_state["health"]
+                + upkeep["team_penalty"]["health_change"]
+            )
+
+    power_shortage_penalty = {
+        "applied": False,
+        "affected_survivor_count": 0,
+        "fatigue_change": 0,
+        "health_change": 0
+    }
+    if direct_power_shortfall > 0:
+        power_shortage_penalty = apply_power_shortage_penalty(conn)
+        survivor_state["fatigue_change"] += (
+            power_shortage_penalty["fatigue_change"]
+        )
+        survivor_state["fatigue"] = clamp_state_value(
+            survivor_state["fatigue"]
+            + power_shortage_penalty["fatigue_change"]
+        )
+
+        power_shortage_text = build_power_shortage_text(direct_power_shortfall)
+        if power_shortage_text:
+            result["result_text"] = (
+                f"{result['result_text']} {power_shortage_text}"
+            )
+
+    result["upkeep"] = upkeep
+    result["resource_shortfall"] = resource_update["shortfall"]
+    result["power_shortage"] = {
+        "active": total_power_shortfall > 0,
+        "shortfall": total_power_shortfall,
+        "team_penalty": power_shortage_penalty
+    }
 
     conn.execute(
         """
@@ -811,12 +1359,7 @@ def duty():
         },
         "duty_type": duty_type,
         "result": result,
-        "resources": {
-            "food": updated_player["food"],
-            "power": updated_player["power"],
-            "materials": updated_player["materials"],
-            "premium_currency": updated_player["premium_currency"]
-        }
+        "resources": build_resource_payload(updated_player)
     })
 
 
@@ -988,13 +1531,15 @@ def gacha_logs():
 def emergency_offer_state():
     conn = get_db_connection()
     context = get_emergency_offer_context(conn)
+    conn.commit()
     conn.close()
 
     return jsonify({
         "status": "ok",
         "active": context["active"],
         "trigger_reason": context["trigger_reason"],
-        "offer": EMERGENCY_OFFER
+        "suppressed": context["close_suppressed"],
+        "offer": build_emergency_offer(context["raw_trigger_reason"])
     })
 
 
@@ -1042,12 +1587,13 @@ def emergency_offer_purchase():
             "message": "offer 不可用",
             "active": False,
             "trigger_reason": None,
-            "offer": EMERGENCY_OFFER
+            "offer": build_emergency_offer(context["raw_trigger_reason"])
         }), 400
 
     log_offer_event(conn, "purchased", context)
 
-    rewards = EMERGENCY_OFFER["rewards"]
+    offer = build_emergency_offer(context["raw_trigger_reason"])
+    rewards = offer["rewards"]
     conn.execute(
         """
         UPDATE player
@@ -1077,15 +1623,10 @@ def emergency_offer_purchase():
     return jsonify({
         "status": "ok",
         "message": "战备补给已送达，全员状态略有恢复。",
-        "offer": EMERGENCY_OFFER,
+        "offer": offer,
         "trigger_reason": context["trigger_reason"],
         "recovery_effect": recovery_effect,
-        "resources": {
-            "food": updated_player["food"],
-            "power": updated_player["power"],
-            "materials": updated_player["materials"],
-            "premium_currency": updated_player["premium_currency"]
-        }
+        "resources": build_resource_payload(updated_player)
     })
 
 
