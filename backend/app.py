@@ -29,40 +29,65 @@ SURVIVOR_POOL = {
     ]
 }
 
-MOOD_PERSONALITY_LABELS = {
-    "cold": "冷静克制",
-    "alert": "高度警觉",
-    "steady": "稳扎稳打",
-    "calm": "沉着温和",
-    "reckless": "冒险冲动",
-    "normal": "朴素可靠",
-    "tired": "疲惫坚守",
-    "gentle": "温和照料",
-    "silent": "沉默寡言"
+STATIC_TRAIT_POOL = [
+    "可靠", "冷静", "温和", "鲁莽", "谨慎", "沉默", "倔强",
+    "机敏", "强硬", "老练", "多疑", "耐压", "护短", "狠劲"
+]
+
+TRAIT_BY_MOOD = {
+    "normal": "可靠",
+    "cold": "冷静",
+    "gentle": "温和",
+    "reckless": "鲁莽",
+    "steady": "谨慎",
+    "silent": "沉默",
+    "alert": "机敏",
+    "calm": "耐压",
+    "tired": "倔强"
 }
 
-ROLE_SIGNATURE_FOCUS = {
-    "维修员": "电缆和滤芯",
-    "守卫": "闸门和夜哨",
-    "采集员": "废墟路线",
-    "医生": "药箱和伤员",
-    "搜寻员": "未知房间",
-    "杂务员": "漏风的角落",
-    "发电员": "发电机余温",
-    "炊事员": "锅底和粮袋",
-    "搬运工": "沉重物资"
+ROLE_PROFILE_MAPPINGS = {
+    "维修员": {
+        "work_style": "先听机器哪儿不对劲，再决定从哪块铁皮下手。",
+        "archive": "停电后的滤芯室里曾留了三天，出来时还抱着一捆干净电缆。"
+    },
+    "杂务员": {
+        "work_style": "哪儿漏风就先去哪儿，落到手里的杂活也都能收拾清楚。",
+        "archive": "总能在漏风走廊里翻出还能用的螺丝和旧布。"
+    },
+    "发电员": {
+        "work_style": "习惯先看电表和油压，灯稳下来以后才肯离开发电间。",
+        "archive": "发电机低吼时，常把耳朵贴近铁壳听每一次抖动。"
+    },
+    "炊事员": {
+        "work_style": "下锅前总要再点一遍库存，尽量让每只碗里都留点热气。",
+        "archive": "灶台烟灰落满袖口，仍记得谁昨夜少领了半勺汤。"
+    },
+    "守卫": {
+        "work_style": "换岗前总会多绕一圈，尤其留意那些突然安静下来的地方。",
+        "archive": "探照灯扫过沙尘时，往往比警铃更早看见阴影。"
+    },
+    "搜寻员": {
+        "work_style": "进废楼前先记退路，背包只留给真正能救命的东西。",
+        "archive": "从塌陷商场的货架间走出来时，背包里装的总是避难所最缺的零碎。"
+    },
+    "采集员": {
+        "work_style": "会把水源、地标和能认路的废弃物一起记下来，回程从不只留一条路。",
+        "archive": "荒地风把地图磨得发白，还是能指出下一处可采的暗沟。"
+    },
+    "医生": {
+        "work_style": "先稳住伤员呼吸，再决定药该省在哪儿、伤口该先处理哪一处。",
+        "archive": "药箱外壳被酸雨咬出白痕，里面的绷带却总是分格收好。"
+    },
+    "搬运工": {
+        "work_style": "搬东西前会先试重量和落脚点，很少让队伍在半路返工。",
+        "archive": "背过一扇从旧地铁站拆下的铁门，后来那成了避难所的新挡板。"
+    }
 }
 
-MOOD_SIGNATURE_PATTERNS = {
-    "cold": "话不多，但会把{focus}记在袖口。",
-    "alert": "睡前总会再确认一次{focus}。",
-    "steady": "相信清点、绳结和{focus}比运气可靠。",
-    "calm": "混乱时先稳住呼吸，再处理{focus}。",
-    "reckless": "常说废墟不会等人，转身就冲向{focus}。",
-    "normal": "不抢风头，只把今天的{focus}做完。",
-    "tired": "眼下有黑影，还是会守着{focus}不松手。",
-    "gentle": "会把最后一点温度留给{focus}。",
-    "silent": "很少开口，只用行动盯住{focus}。"
+DEFAULT_ROLE_PROFILE = {
+    "work_style": "接到活就先确认工具和路线，尽量把风险留在出门之前。",
+    "archive": "尘暴压低天色时，{role}把自己的工具放回最顺手的位置。"
 }
 
 RARITY_GACHA_LABELS = {
@@ -297,17 +322,43 @@ def survivor_name_exists(conn, name):
     ).fetchone() is not None
 
 
-def build_survivor_personality(mood, role):
-    mood_label = MOOD_PERSONALITY_LABELS.get(mood, "沉着可靠")
-    focus = ROLE_SIGNATURE_FOCUS.get(role, f"{role}的职责")
-    signature_pattern = MOOD_SIGNATURE_PATTERNS.get(
-        mood,
-        "把{focus}当成今天必须守住的事。"
+def pick_static_trait(mood, role):
+    if mood in TRAIT_BY_MOOD:
+        return TRAIT_BY_MOOD[mood]
+
+    seed = f"{mood}:{role}"
+    trait_index = sum(ord(character) for character in seed) % len(STATIC_TRAIT_POOL)
+    return STATIC_TRAIT_POOL[trait_index]
+
+
+def build_survivor_personality(mood, role, name=None):
+    trait = pick_static_trait(mood, role)
+    role_profile = ROLE_PROFILE_MAPPINGS.get(role, DEFAULT_ROLE_PROFILE)
+    work_style_line = role_profile["work_style"].format(
+        trait=trait,
+        role=role
+    )
+    archive_line = role_profile["archive"].format(
+        trait=trait,
+        role=role
     )
 
     return {
-        "personality_label": f"{mood_label}的{role}",
-        "signature_line": signature_pattern.format(focus=focus)
+        "trait_label": trait,
+        "work_style_line": work_style_line,
+        "archive_line": archive_line,
+        "personality_label": trait,
+        "signature_line": archive_line
+    }
+
+
+def build_survivor_profile_fields(personality):
+    return {
+        "trait_label": personality["trait_label"],
+        "work_style_line": personality["work_style_line"],
+        "archive_line": personality["archive_line"],
+        "personality_label": personality["personality_label"],
+        "signature_line": personality["signature_line"]
     }
 
 
@@ -384,7 +435,8 @@ def build_duty_result_text(
 ):
     personality = build_survivor_personality(
         survivor["mood"],
-        survivor["role"]
+        survivor["role"],
+        survivor["name"]
     )
     state_tags = build_survivor_state_tags(
         survivor["fatigue"],
@@ -396,7 +448,7 @@ def build_duty_result_text(
     )
     outcome_phrase = build_duty_outcome_phrase(output_warnings, state_change)
     flavor_sentence = (
-        f"{personality['personality_label']}接手{duty_focus}，"
+        f"{survivor['name']}接手{duty_focus}时显得{personality['trait_label']}，"
         f"{condition_phrase}，{outcome_phrase}。"
     )
 
@@ -1160,8 +1212,7 @@ def survivors():
             "mood": row["mood"],
             "fatigue": row["fatigue"],
             "health": row["health"],
-            "personality_label": personality["personality_label"],
-            "signature_line": personality["signature_line"],
+            **build_survivor_profile_fields(personality),
             "current_state_tag": state_tags["current_state_tag"],
             "injured_tag": state_tags["injured_tag"]
         })
@@ -1214,8 +1265,7 @@ def duty():
                 "mood": survivor["mood"],
                 "fatigue": survivor["fatigue"],
                 "health": survivor["health"],
-                "personality_label": personality["personality_label"],
-                "signature_line": personality["signature_line"],
+                **build_survivor_profile_fields(personality),
                 "current_state_tag": state_tags["current_state_tag"],
                 "injured_tag": state_tags["injured_tag"]
             }
@@ -1352,8 +1402,7 @@ def duty():
             "mood": survivor["mood"],
             "fatigue": survivor_state["fatigue"],
             "health": survivor_state["health"],
-            "personality_label": personality["personality_label"],
-            "signature_line": personality["signature_line"],
+            **build_survivor_profile_fields(personality),
             "current_state_tag": state_tags["current_state_tag"],
             "injured_tag": state_tags["injured_tag"]
         },
@@ -1450,8 +1499,7 @@ def rest_survivor():
             "mood": survivor["mood"],
             "fatigue": updated_fatigue,
             "health": updated_health,
-            "personality_label": personality["personality_label"],
-            "signature_line": personality["signature_line"],
+            **build_survivor_profile_fields(personality),
             "current_state_tag": state_tags["current_state_tag"],
             "injured_tag": state_tags["injured_tag"]
         },

@@ -60,6 +60,10 @@ function getEmergencyOfferLogs() {
   return request("/api/emergency-offer/logs", "GET")
 }
 
+function resetEmergencyOfferDebug() {
+  return request("/api/debug/reset-emergency-offer", "POST")
+}
+
 module.exports = {
   getResources,
   pullGacha,
@@ -72,5 +76,6 @@ module.exports = {
   exposeEmergencyOffer,
   closeEmergencyOffer,
   purchaseEmergencyOffer,
-  getEmergencyOfferLogs
+  getEmergencyOfferLogs,
+  resetEmergencyOfferDebug
 }

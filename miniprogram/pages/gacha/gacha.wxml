@@ -30,7 +30,27 @@
   </view>
 
   <view class="section">
-    <button class="action-button" bindtap="pullSurvivor" loading="{{pulling}}" disabled="{{pulling}}">进行一次招募</button>
+    <view class="recruit-console">
+      <view wx:if="{{isPullAnimating}}" class="recruit-signal-overlay">
+        <view class="signal-band signal-band--one"></view>
+        <view class="signal-band signal-band--two"></view>
+        <view class="signal-band signal-band--three"></view>
+      </view>
+      <view class="console-topline">
+        <text class="console-kicker">招募控制台</text>
+        <text class="console-status">{{revealStatusText}}</text>
+      </view>
+      <button class="action-button recruit-switch" hover-class="action-button--active" bindtap="pullSurvivor" loading="{{pulling}}" disabled="{{pulling}}">{{pulling ? "信号接入中..." : "进行一次招募"}}</button>
+      <view wx:if="{{isPullAnimating}}" class="reveal-panel">
+        <text class="reveal-title">信号解码中</text>
+        <text class="reveal-copy">招募舱正在校准身份信标...</text>
+        <view class="reveal-bars">
+          <view class="reveal-bar"></view>
+          <view class="reveal-bar reveal-bar--delay"></view>
+          <view class="reveal-bar reveal-bar--slow"></view>
+        </view>
+      </view>
+    </view>
     <view wx:if="{{errorMessage}}" class="message-card">
       <text class="muted">{{errorMessage}}</text>
     </view>
@@ -38,18 +58,34 @@
 
   <view class="section">
     <text class="section-title">招募结果</text>
-    <view wx:if="{{survivor}}" class="card result-card">
-      <text class="entity-title">{{survivor.name}}</text>
-      <text wx:if="{{survivor.duplicate}}" class="field-row">结果：重复成员</text>
-      <text wx:if="{{survivor.compensationText}}" class="field-row">补偿：{{survivor.compensationText}}</text>
-      <text wx:if="{{survivor.gachaIntroLine}}" class="field-row">入队：{{survivor.gachaIntroLine}}</text>
-      <text class="field-row">稀有度：{{survivor.rarity}}</text>
-      <text class="field-row">职业：{{survivor.role}}</text>
-      <text class="field-row">状态：{{survivor.mood}}</text>
-      <text wx:if="{{survivor.currentStateTag}}" class="field-row">当前状态：{{survivor.currentStateTag}}</text>
-      <text wx:if="{{survivor.injuredTag}}" class="field-row">伤情：{{survivor.injuredTag}}</text>
-      <text wx:if="{{survivor.personalityLabel}}" class="field-row">性格：{{survivor.personalityLabel}}</text>
-      <text wx:if="{{survivor.signatureLine}}" class="field-row">档案：{{survivor.signatureLine}}</text>
+    <view wx:if="{{isPullAnimating}}" class="card result-placeholder">
+      <text class="muted">弱信号传输中，请等待招募舱回传档案...</text>
+    </view>
+    <view wx:elif="{{showResultCard && survivor}}" class="{{survivor.resultCardClass}}">
+      <view class="result-topline">
+        <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
+        <text wx:if="{{survivor.duplicate}}" class="duplicate-badge">重复信号</text>
+      </view>
+      <text class="recruit-name">{{survivor.name}}</text>
+      <view class="archive-grid">
+        <view class="archive-chip">
+          <text class="archive-label">职业</text>
+          <text class="archive-value">{{survivor.role}}</text>
+        </view>
+        <view class="archive-chip">
+          <text class="archive-label">特质</text>
+          <text class="archive-value">{{survivor.traitLabel}}</text>
+        </view>
+      </view>
+      <view class="archive-lines">
+        <text wx:if="{{survivor.duplicate}}" class="archive-line archive-line--warning">结果：重复成员</text>
+        <text wx:if="{{survivor.compensationText}}" class="archive-line archive-line--warning">补偿：{{survivor.compensationText}}</text>
+        <text wx:if="{{survivor.gachaIntroLine}}" class="archive-line">入队记录：{{survivor.gachaIntroLine}}</text>
+        <text wx:if="{{survivor.currentStateTag}}" class="archive-line">当前状态：{{survivor.currentStateTag}}</text>
+        <text wx:if="{{survivor.injuredTag}}" class="archive-line archive-line--danger">伤情：{{survivor.injuredTag}}</text>
+        <text wx:if="{{survivor.workStyleLine}}" class="archive-line">作风：{{survivor.workStyleLine}}</text>
+        <text wx:if="{{survivor.archiveLine}}" class="archive-line">档案摘录：{{survivor.archiveLine}}</text>
+      </view>
     </view>
     <view wx:else class="card">
       <text class="muted">暂无招募结果</text>

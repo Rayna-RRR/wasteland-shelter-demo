@@ -1,11 +1,15 @@
 <view class="page">
+  <view class="global-noise-overlay"></view>
   <view class="header">
     <text class="title">行动日志</text>
     <text class="subtitle">记录避难所行动</text>
   </view>
 
-  <view class="section">
-    <text class="section-title">招募日志</text>
+  <view class="section log-section log-section--gacha">
+    <view class="log-section-header">
+      <text class="section-title">招募日志</text>
+      <text class="log-section-code">SIGNAL</text>
+    </view>
     <view wx:if="{{loadingGachaLogs}}" class="card">
       <text class="muted">招募日志加载中...</text>
     </view>
@@ -13,10 +17,22 @@
       <text class="muted">{{gachaErrorMessage}}</text>
     </view>
     <block wx:elif="{{gachaLogs.length}}">
-      <view wx:for="{{gachaLogs}}" wx:key="id" class="log-card">
-        <text class="entity-title">{{item.survivor_name}}（{{item.rarity}}）</text>
-        <text class="field-row">职业：{{item.role}}</text>
-        <text class="field-row">时间：{{item.created_at}}</text>
+      <view wx:for="{{gachaLogs}}" wx:key="id" class="{{item.logCardClass}}">
+        <view class="log-topline">
+          <text class="{{item.tagClass}}">{{item.rarityText}}</text>
+          <text class="log-time">{{item.created_at}}</text>
+        </view>
+        <text class="log-title">{{item.survivor_name}}</text>
+        <view class="log-detail-grid">
+          <view class="log-detail">
+            <text class="log-detail-label">记录类型</text>
+            <text class="log-detail-value">{{item.markerText}}</text>
+          </view>
+          <view class="log-detail">
+            <text class="log-detail-label">职业登记</text>
+            <text class="log-detail-value">{{item.role}}</text>
+          </view>
+        </view>
       </view>
     </block>
     <view wx:else class="card">
@@ -24,8 +40,11 @@
     </view>
   </view>
 
-  <view class="section">
-    <text class="section-title">值勤日志</text>
+  <view class="section log-section log-section--duty">
+    <view class="log-section-header">
+      <text class="section-title">值勤日志</text>
+      <text class="log-section-code">DUTY</text>
+    </view>
     <view wx:if="{{loadingDutyLogs}}" class="card">
       <text class="muted">值勤日志加载中...</text>
     </view>
@@ -33,11 +52,18 @@
       <text class="muted">{{dutyErrorMessage}}</text>
     </view>
     <block wx:elif="{{dutyLogs.length}}">
-      <view wx:for="{{dutyLogs}}" wx:key="id" class="log-card">
-        <text class="entity-title">{{item.survivor_name}}：{{item.duty_label}}</text>
-        <text class="field-row">{{item.result_text}}</text>
-        <text class="field-row">食物：{{item.food_change_text}}　电力：{{item.power_change_text}}　材料：{{item.materials_change_text}}</text>
-        <text class="field-row">时间：{{item.created_at}}</text>
+      <view wx:for="{{dutyLogs}}" wx:key="id" class="{{item.logCardClass}}">
+        <view class="log-topline">
+          <text class="{{item.tagClass}}">{{item.markerText}}</text>
+          <text class="log-time">{{item.created_at}}</text>
+        </view>
+        <text class="log-title">{{item.survivor_name}} · {{item.duty_label}}</text>
+        <text class="log-body">{{item.result_text}}</text>
+        <view class="resource-change-row">
+          <text class="resource-change">食物 {{item.food_change_text}}</text>
+          <text class="resource-change">电力 {{item.power_change_text}}</text>
+          <text class="resource-change">材料 {{item.materials_change_text}}</text>
+        </view>
       </view>
     </block>
     <view wx:else class="card">
@@ -45,8 +71,11 @@
     </view>
   </view>
 
-  <view class="section">
-    <text class="section-title">应急补给日志</text>
+  <view class="section log-section log-section--offer">
+    <view class="log-section-header">
+      <text class="section-title">应急补给日志</text>
+      <text class="log-section-code">SUPPLY</text>
+    </view>
     <view wx:if="{{loadingOfferLogs}}" class="card">
       <text class="muted">补给日志加载中...</text>
     </view>
@@ -54,12 +83,17 @@
       <text class="muted">{{offerErrorMessage}}</text>
     </view>
     <block wx:elif="{{offerLogs.length}}">
-      <view wx:for="{{offerLogs}}" wx:key="id" class="log-card">
-        <text class="entity-title">{{item.action_type}}</text>
-        <text class="field-row">压力来源：{{item.trigger_reason}}</text>
-        <text class="field-row">资源快照：{{item.resource_snapshot_text}}</text>
-        <text class="field-row">幸存者数量：{{item.survivor_count_text}}</text>
-        <text class="field-row">时间：{{item.created_at}}</text>
+      <view wx:for="{{offerLogs}}" wx:key="id" class="{{item.logCardClass}}">
+        <view class="log-topline">
+          <text class="{{item.tagClass}}">{{item.action_type}}</text>
+          <text class="log-time">{{item.created_at}}</text>
+        </view>
+        <text class="log-title">{{item.markerText}}</text>
+        <view class="offer-record-panel">
+          <text class="offer-record-line">压力来源：{{item.trigger_reason}}</text>
+          <text class="offer-record-line">资源快照：{{item.resource_snapshot_text}}</text>
+          <text class="offer-record-line">幸存者数量：{{item.survivor_count_text}}</text>
+        </view>
       </view>
     </block>
     <view wx:else class="card">

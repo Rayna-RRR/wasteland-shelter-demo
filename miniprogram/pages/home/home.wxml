@@ -1,51 +1,70 @@
-<view class="page">
-  <view class="header">
+<view class="page home-page">
+  <view class="home-texture"></view>
+  <view class="header home-header">
+    <text class="header-kicker">避难所控制台</text>
     <text class="title">废土避难所</text>
-    <text class="subtitle">资源总览</text>
+    <text class="subtitle">资源总览 / 值勤待命 / 补给协议</text>
   </view>
 
-  <view class="section">
-    <text class="section-title">当前资源</text>
+  <view class="section resource-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">资源监控</text>
+        <text class="section-title">当前资源</text>
+      </view>
+      <text class="{{resourcePanelClass}}">{{resourceStatusText}}</text>
+    </view>
     <view wx:if="{{loading}}" class="message-card">
       <text class="muted">资源加载中...</text>
     </view>
     <view wx:elif="{{errorMessage}}" class="message-card">
       <text class="muted">{{errorMessage}}</text>
     </view>
-    <view class="resource-grid">
-      <view class="resource-item">
-        <text class="resource-label">食物</text>
-        <text class="resource-value">{{resources.food}}</text>
-      </view>
-      <view class="resource-item">
-        <text class="resource-label">电力</text>
-        <text class="resource-value">{{resources.power}}</text>
-      </view>
-      <view class="resource-item">
-        <text class="resource-label">材料</text>
-        <text class="resource-value">{{resources.materials}}</text>
-      </view>
-      <view class="resource-item">
-        <text class="resource-label">招募券</text>
-        <text class="resource-value">{{resources.premium_currency}}</text>
+    <view class="resource-grid resource-instrument-grid">
+      <view wx:for="{{resourceCards}}" wx:key="key" class="{{item.cardClass}}">
+        <view class="instrument-topline">
+          <text class="instrument-code">{{item.code}}</text>
+          <text class="instrument-status">{{item.statusLabel}}</text>
+        </view>
+        <text class="resource-label">{{item.label}}</text>
+        <text class="resource-value">{{item.value}}</text>
+        <view class="resource-meter">
+          <view class="{{item.meterClass}}" style="{{item.meterStyle}}"></view>
+        </view>
+        <text class="resource-threshold">{{item.thresholdText}}</text>
       </view>
     </view>
-    <view wx:if="{{resources.power_shortage}}" class="message-card">
+    <view wx:if="{{resources.power_shortage}}" class="message-card power-shortage-card">
       <text class="muted">电力短缺：避难所已进入低功耗运行。</text>
     </view>
-    <button class="action-button" bindtap="refreshHome" loading="{{loading}}" disabled="{{loading}}">刷新资源</button>
+    <button class="action-button control-button" hover-class="action-button--active" bindtap="refreshHome" loading="{{loading}}" disabled="{{loading}}">刷新资源</button>
   </view>
 
-  <view wx:if="{{offerVisible || offerResultMessage || offerErrorMessage}}" class="section">
-    <text class="section-title">补给室来讯</text>
+  <view wx:if="{{offerVisible || offerResultMessage || offerErrorMessage}}" class="section offer-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">事件通讯</text>
+        <text class="section-title">补给室来讯</text>
+      </view>
+    </view>
     <view wx:if="{{offerVisible}}" class="offer-card">
       <view class="offer-topline">
-        <text class="offer-kicker">避难所事件</text>
-        <text class="offer-badge">{{offer.urgency_label}}</text>
+        <text class="offer-kicker">战备补给协议</text>
+        <text class="offer-badge">协议：{{offer.urgency_label}}</text>
       </view>
       <text class="offer-title">{{offer.title}}</text>
       <text class="offer-copy">{{offer.subtitle}}</text>
-      <text class="offer-reason">当前压力：{{offerTriggerLabel}}</text>
+      <view class="offer-signal-grid">
+        <view class="offer-signal">
+          <text class="offer-signal-label">压力来源</text>
+          <text class="offer-signal-value">{{offerTriggerLabel}}</text>
+        </view>
+        <view class="offer-signal">
+          <text class="offer-signal-label">协议费用</text>
+          <text class="offer-signal-value">{{offer.price_label}}</text>
+        </view>
+      </view>
+      <text class="offer-reward-title">补给内容</text>
       <view class="offer-reward-grid">
         <view wx:for="{{offerRewardRows}}" wx:key="label" class="offer-reward">
           <text class="offer-reward-label">{{item.label}}</text>
@@ -53,8 +72,8 @@
         </view>
       </view>
       <view class="offer-actions">
-        <button class="offer-button-secondary" bindtap="closeEmergencyOffer" disabled="{{offerPurchasing}}">暂缓处理</button>
-        <button class="offer-button-primary" bindtap="purchaseEmergencyOffer" loading="{{offerPurchasing}}" disabled="{{offerPurchasing}}">启用协议 · {{offer.price_label}}</button>
+        <button class="offer-button-secondary" hover-class="offer-button--active" bindtap="closeEmergencyOffer" disabled="{{offerPurchasing}}">暂缓处理</button>
+        <button class="offer-button-primary" hover-class="offer-button--active" bindtap="purchaseEmergencyOffer" loading="{{offerPurchasing}}" disabled="{{offerPurchasing}}">启用协议 · {{offer.price_label}}</button>
       </view>
     </view>
     <view wx:if="{{offerErrorMessage}}" class="message-card">
@@ -62,6 +81,14 @@
     </view>
     <view wx:if="{{offerResultMessage}}" class="message-card">
       <text class="muted">{{offerResultMessage}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{isLocalDev}}" class="section debug-section">
+    <text class="section-title">本地调试</text>
+    <view class="debug-card">
+      <text class="debug-helper">仅本地开发可见，用于清空补给协议测试记录并重新触发测试流程。</text>
+      <button class="debug-button" hover-class="debug-button--active" bindtap="confirmResetEmergencyOfferDebug" loading="{{debugResetting}}" disabled="{{debugResetting}}">重置补给测试状态</button>
     </view>
   </view>
 

@@ -1,6 +1,44 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
 
+function getRarityKey(rarity) {
+  const value = String(rarity || "R").toLowerCase()
+
+  if (value === "ssr" || value === "sr") {
+    return value
+  }
+
+  return "r"
+}
+
+function getOfferEventClass(eventType) {
+  if (eventType === "purchased") {
+    return "log-tag log-tag--offer-purchased"
+  }
+
+  if (eventType === "closed") {
+    return "log-tag log-tag--offer-closed"
+  }
+
+  return "log-tag log-tag--offer-exposed"
+}
+
+function formatGachaLog(row) {
+  const rarityKey = getRarityKey(row.rarity)
+
+  return {
+    id: row.id,
+    survivor_name: row.survivor_name,
+    rarity: row.rarity,
+    role: row.role,
+    created_at: row.created_at,
+    logCardClass: `log-card log-card--gacha log-card--rarity-${rarityKey}`,
+    tagClass: `log-tag log-tag--rarity-${rarityKey}`,
+    markerText: "招募记录",
+    rarityText: row.rarity || "R"
+  }
+}
+
 function formatDutyLog(row) {
   return {
     id: row.id,
@@ -11,6 +49,9 @@ function formatDutyLog(row) {
     food_change_text: format.formatChange(row.food_change),
     power_change_text: format.formatChange(row.power_change),
     materials_change_text: format.formatChange(row.materials_change),
+    logCardClass: "log-card log-card--duty",
+    tagClass: "log-tag log-tag--duty",
+    markerText: "值勤行动",
     created_at: row.created_at
   }
 }
@@ -26,6 +67,9 @@ function formatOfferLog(row) {
       `材料 ${row.materials_before} / 招募券 ${row.premium_currency_before}`
     ),
     survivor_count_text: row.survivor_count === undefined ? "--" : row.survivor_count,
+    logCardClass: `log-card log-card--offer log-card--offer-${row.event_type || "exposed"}`,
+    tagClass: getOfferEventClass(row.event_type),
+    markerText: "补给协议",
     created_at: row.created_at
   }
 }
@@ -63,7 +107,7 @@ Page({
       .then((res) => {
         if (res.statusCode === 200 && Array.isArray(res.data)) {
           this.setData({
-            gachaLogs: res.data
+            gachaLogs: res.data.map(formatGachaLog)
           })
           return
         }

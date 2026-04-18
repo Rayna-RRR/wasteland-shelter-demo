@@ -7,14 +7,14 @@
   ],
   "window": {
     "navigationBarTitleText": "废土避难所",
-    "navigationBarBackgroundColor": "#263238",
+    "navigationBarBackgroundColor": "#12110F",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f4f1e8"
+    "backgroundColor": "#0F0E0D"
   },
   "tabBar": {
-    "color": "#6b6358",
-    "selectedColor": "#1f6f68",
-    "backgroundColor": "#ffffff",
+    "color": "#8F867A",
+    "selectedColor": "#C19A6B",
+    "backgroundColor": "#12110F",
     "borderStyle": "black",
     "list": [
       {

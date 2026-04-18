@@ -1,17 +1,76 @@
 .survivor-card {
+  position: relative;
   box-sizing: border-box;
   margin-bottom: 18rpx;
-  padding: 22rpx 24rpx;
-  border: 1rpx solid #d7cbbd;
-  border-left: 6rpx solid #7d8f83;
+  padding: 22rpx 24rpx 24rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(193, 154, 107, 0.36);
+  border-left: 6rpx solid var(--rust-red);
   border-radius: 8rpx;
-  background: #fffdf7;
+  background: rgba(18, 18, 18, 0.82);
+  box-shadow: 0 12rpx 34rpx rgba(0, 0, 0, 0.28);
+}
+
+.survivor-card::after,
+.selected-duty-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4rpx;
+  background: rgba(193, 154, 107, 0.36);
+}
+
+.survivor-card--ssr {
+  border-color: rgba(255, 87, 34, 0.42);
+  border-left-color: var(--hazard-orange);
+  background:
+    linear-gradient(135deg, rgba(255, 87, 34, 0.12), transparent 42%),
+    rgba(18, 18, 18, 0.86);
+}
+
+.survivor-card--sr {
+  border-color: rgba(193, 154, 107, 0.44);
+  border-left-color: var(--desert-yellow);
+  background:
+    linear-gradient(135deg, rgba(193, 154, 107, 0.12), transparent 42%),
+    rgba(18, 18, 18, 0.84);
+}
+
+.survivor-card--r {
+  border-color: rgba(95, 90, 82, 0.52);
+  border-left-color: var(--metal-light);
+}
+
+.survivor-card--ssr::after {
+  background: var(--hazard-orange);
+}
+
+.survivor-card--sr::after {
+  background: var(--desert-yellow);
+}
+
+.survivor-card--r::after {
+  background: var(--metal-light);
+}
+
+.survivor-card--hover {
+  background: rgba(33, 33, 33, 0.88);
+  transform: translateY(-2rpx);
 }
 
 .survivor-card--selected {
-  border-color: #1f6f68;
-  border-left-color: #1f6f68;
-  background: #f0faf7;
+  border-color: rgba(57, 255, 20, 0.58);
+  border-left-color: var(--radiation-green);
+  background:
+    linear-gradient(135deg, rgba(57, 255, 20, 0.10), transparent 48%),
+    rgba(18, 18, 18, 0.90);
+  box-shadow: 0 0 34rpx rgba(57, 255, 20, 0.14), 0 12rpx 34rpx rgba(0, 0, 0, 0.30);
+}
+
+.survivor-card--selected::after {
+  background: var(--radiation-green);
 }
 
 .survivor-heading {
@@ -26,12 +85,157 @@
   margin-bottom: 0;
 }
 
+.survivor-card-topline,
+.selected-status-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+  margin-bottom: 16rpx;
+}
+
+.selected-kicker {
+  color: var(--radiation-green);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.survivor-profile-row,
+.selected-profile {
+  display: flex;
+  gap: 18rpx;
+}
+
+.selected-profile {
+  align-items: flex-start;
+}
+
+.survivor-profile-main,
+.selected-profile-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.survivor-mark {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.34);
+  border-radius: 8rpx;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(193, 154, 107, 0.16), transparent 56%),
+    rgba(0, 0, 0, 0.24);
+}
+
+.survivor-mark--compact {
+  width: 84rpx;
+  height: 84rpx;
+}
+
+.survivor-mark-name {
+  color: var(--base-text);
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.survivor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+
+.survivor-tag {
+  box-sizing: border-box;
+  padding: 5rpx 12rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.24);
+  border-radius: 8rpx;
+  color: rgba(211, 211, 211, 0.82);
+  font-size: 23rpx;
+  line-height: 30rpx;
+}
+
+.survivor-note {
+  display: block;
+  margin-top: 12rpx;
+  color: rgba(211, 211, 211, 0.82);
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.survivor-note--danger {
+  color: #ff8a80;
+}
+
+.rarity-badge {
+  box-sizing: border-box;
+  min-height: 38rpx;
+  padding: 5rpx 14rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 28rpx;
+  white-space: nowrap;
+}
+
+.rarity-badge--ssr {
+  border: 1rpx solid rgba(255, 87, 34, 0.48);
+  background: rgba(255, 87, 34, 0.14);
+  color: var(--hazard-orange);
+}
+
+.rarity-badge--sr {
+  border: 1rpx solid rgba(193, 154, 107, 0.48);
+  background: rgba(193, 154, 107, 0.12);
+  color: var(--desert-yellow);
+}
+
+.rarity-badge--r {
+  border: 1rpx solid rgba(95, 90, 82, 0.56);
+  background: rgba(95, 90, 82, 0.12);
+  color: var(--muted-text);
+}
+
+.selected-duty-card {
+  position: relative;
+  box-sizing: border-box;
+  padding: 24rpx 26rpx 26rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(57, 255, 20, 0.42);
+  border-left: 8rpx solid var(--radiation-green);
+  border-radius: 8rpx;
+  background:
+    linear-gradient(135deg, rgba(57, 255, 20, 0.10), transparent 48%),
+    rgba(14, 18, 14, 0.92);
+  box-shadow: 0 0 38rpx rgba(57, 255, 20, 0.13), 0 18rpx 44rpx rgba(0, 0, 0, 0.34);
+}
+
+.selected-duty-card--ssr {
+  border-color: rgba(255, 87, 34, 0.44);
+  border-left-color: var(--hazard-orange);
+}
+
+.selected-duty-card--sr {
+  border-color: rgba(193, 154, 107, 0.46);
+  border-left-color: var(--desert-yellow);
+}
+
+.selected-duty-card--r {
+  border-color: rgba(95, 90, 82, 0.58);
+  border-left-color: var(--metal-light);
+}
+
 .state-panel {
   margin-top: 18rpx;
   padding: 18rpx 20rpx;
-  border: 1rpx solid #e2d6c6;
+  border: 1rpx solid rgba(193, 154, 107, 0.28);
   border-radius: 8rpx;
-  background: #f8f4ea;
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .state-row {
@@ -46,22 +250,27 @@
 }
 
 .state-label {
-  color: #6d6257;
+  box-sizing: border-box;
+  min-width: 92rpx;
+  color: var(--desert-yellow);
   font-size: 26rpx;
-}
-
-.state-value {
-  color: #263238;
-  font-size: 30rpx;
   font-weight: 700;
 }
 
+.state-value {
+  min-width: 72rpx;
+  color: var(--base-text);
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: right;
+}
+
 .state-value--warning {
-  color: #9a650f;
+  color: var(--hazard-orange);
 }
 
 .state-value--danger {
-  color: #b5382e;
+  color: #ff6a6a;
 }
 
 .state-tag {
@@ -77,43 +286,67 @@
 }
 
 .state-tag--good {
-  background: #e7f3ed;
-  color: #1f6f4f;
+  border: 1rpx solid rgba(57, 255, 20, 0.36);
+  background: rgba(57, 255, 20, 0.10);
+  color: var(--radiation-green);
 }
 
 .state-tag--warning {
-  background: #fff1d8;
-  color: #8a5a0c;
+  border: 1rpx solid rgba(255, 87, 34, 0.38);
+  background: rgba(255, 87, 34, 0.12);
+  color: var(--hazard-orange);
 }
 
 .state-tag--danger {
-  background: #ffe4df;
-  color: #a12f28;
+  border: 1rpx solid rgba(255, 106, 106, 0.46);
+  background: rgba(139, 58, 58, 0.26);
+  color: #ff6a6a;
 }
 
 .duty-button-list {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
-  margin-top: 18rpx;
+  margin-top: 22rpx;
+}
+
+.dispatch-label {
+  display: block;
+  width: 100%;
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
 }
 
 .duty-button {
+  flex: 1 1 30%;
+  min-width: 148rpx;
+  min-height: 68rpx;
   margin: 0;
-  border: 1rpx solid #c8d8d2;
+  border: 1rpx solid rgba(193, 154, 107, 0.34);
   border-radius: 8rpx;
-  background: #eef6f3;
-  color: #1f524c;
+  background:
+    linear-gradient(180deg, rgba(193, 154, 107, 0.12), rgba(0, 0, 0, 0.12)),
+    rgba(18, 18, 18, 0.86);
+  color: var(--base-text);
   font-size: 26rpx;
+  font-weight: 700;
+  line-height: 68rpx;
+}
+
+.duty-button--active {
+  opacity: 0.88;
+  transform: translateY(2rpx);
 }
 
 .duty-button[disabled] {
-  background: #e2e8e6;
-  color: #7b8986;
+  border-color: rgba(211, 211, 211, 0.16);
+  background: #343434;
+  color: rgba(211, 211, 211, 0.58);
 }
 
 .rest-button {
-  border-color: #d9c5a6;
-  background: #fff7e6;
-  color: #74511e;
+  border-color: rgba(57, 255, 20, 0.34);
+  background: rgba(57, 255, 20, 0.08);
+  color: var(--radiation-green);
 }

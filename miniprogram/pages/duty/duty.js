@@ -41,6 +41,20 @@ function getHealthClass(health) {
   return health <= 30 ? "state-value state-value--danger" : "state-value"
 }
 
+function getRarityKey(rarity) {
+  const value = String(rarity || "R").toLowerCase()
+
+  if (value === "ssr" || value === "sr") {
+    return value
+  }
+
+  return "r"
+}
+
+function getRarityLabel(rarity) {
+  return rarity || "R"
+}
+
 function formatState(fatigue, health) {
   const fatigueValue = Number(fatigue === undefined ? 0 : fatigue)
   const healthValue = Number(health === undefined ? 100 : health)
@@ -55,25 +69,41 @@ function formatState(fatigue, health) {
   }
 }
 
+function normalizeSurvivorProfile(survivor, fallbackStateTag) {
+  return {
+    traitLabel: survivor.trait_label || survivor.personality_label || (survivor.mood ? format.formatMood(survivor.mood) : ""),
+    workStyleLine: survivor.work_style_line || survivor.personality_label || "",
+    archiveLine: survivor.archive_line || survivor.signature_line || "",
+    currentStateTag: survivor.current_state_tag || fallbackStateTag || ""
+  }
+}
+
 function formatSurvivor(row) {
   const state = formatState(row.fatigue, row.health)
+  const rarityKey = getRarityKey(row.rarity)
+  const profile = normalizeSurvivorProfile(row, state.stateTag)
 
   return {
     id: row.id,
     name: row.name,
-    rarity: row.rarity,
+    rarity: getRarityLabel(row.rarity),
+    rarityKey,
+    rarityBadgeClass: `rarity-badge rarity-badge--${rarityKey}`,
+    selectedPanelClass: `selected-duty-card selected-duty-card--${rarityKey}`,
     role: row.role,
-    mood: format.formatMood(row.mood),
-    personalityLabel: row.personality_label || "",
-    signatureLine: row.signature_line || "",
+    traitLabel: profile.traitLabel,
+    workStyleLine: profile.workStyleLine,
+    archiveLine: profile.archiveLine,
+    currentStateTag: profile.currentStateTag,
     injuredTag: row.injured_tag || "",
     fatigue: state.fatigue,
     health: state.health,
     fatigueClass: state.fatigueClass,
     healthClass: state.healthClass,
-    stateTag: row.current_state_tag || state.stateTag,
+    stateTag: profile.currentStateTag || state.stateTag,
     stateTagClass: state.stateTagClass,
-    cardClass: "survivor-card"
+    cardBaseClass: `survivor-card survivor-card--${rarityKey}`,
+    cardClass: `survivor-card survivor-card--${rarityKey}`
   }
 }
 
@@ -92,8 +122,9 @@ function applySurvivorSelection(survivors, selectedSurvivorId) {
 
   const markedSurvivors = survivors.map((survivor) => {
     const selected = Number(survivor.id) === selectedId
+    const cardBaseClass = survivor.cardBaseClass || "survivor-card"
     const markedSurvivor = Object.assign({}, survivor, {
-      cardClass: selected ? "survivor-card survivor-card--selected" : "survivor-card"
+      cardClass: selected ? `${cardBaseClass} survivor-card--selected` : cardBaseClass
     })
 
     if (selected) {
@@ -140,12 +171,15 @@ function getRestErrorMessage(res) {
 
 function buildResultPanel(result, survivor, dutyLabel) {
   const survivorState = formatState(survivor.fatigue, survivor.health)
+  const profile = normalizeSurvivorProfile(survivor, survivorState.stateTag)
 
   return {
     survivorName: survivor.name || "幸存者",
     dutyLabel,
-    personalityLabel: survivor.personality_label || "",
-    signatureLine: survivor.signature_line || "",
+    traitLabel: profile.traitLabel,
+    workStyleLine: profile.workStyleLine,
+    archiveLine: profile.archiveLine,
+    currentStateTag: profile.currentStateTag,
     injuredTag: survivor.injured_tag || "",
     resultText: result.result_text,
     foodChange: format.formatChange(result.food_change),
@@ -155,7 +189,7 @@ function buildResultPanel(result, survivor, dutyLabel) {
     health: survivorState.health,
     fatigueClass: survivorState.fatigueClass,
     healthClass: survivorState.healthClass,
-    stateTag: survivor.current_state_tag || survivorState.stateTag,
+    stateTag: profile.currentStateTag || survivorState.stateTag,
     stateTagClass: survivorState.stateTagClass
   }
 }
