@@ -148,6 +148,39 @@ SHELTER_UPKEEP_COSTS = {
 SHELTER_UPKEEP_FATIGUE_PENALTY = 6
 SHELTER_UPKEEP_HEALTH_PENALTY = 2
 PLAYER_RESOURCE_KEYS = ("food", "power", "materials")
+SHELTER_CODE_MAX_LENGTH = 16
+COMMANDER_NAME_MAX_LENGTH = 12
+LOCAL_DEV_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+PRE_INIT_PLAYER_RESOURCES = {
+    "food": 100,
+    "power": 100,
+    "materials": 50,
+    "premium_currency": 20
+}
+INIT_INTRO_TEXT = (
+    "旧广播塔还剩最后一格电。登记代号，确认指挥官，"
+    "补给室会按难度发放第一批物资。"
+)
+DIFFICULTY_STARTING_RESOURCES = {
+    "稳健": {
+        "food": 120,
+        "power": 110,
+        "materials": 90,
+        "premium_currency": 60
+    },
+    "标准": {
+        "food": 100,
+        "power": 100,
+        "materials": 70,
+        "premium_currency": 40
+    },
+    "极端": {
+        "food": 70,
+        "power": 75,
+        "materials": 45,
+        "premium_currency": 20
+    }
+}
 POWER_SHORTAGE_FATIGUE_PENALTY = 4
 FATIGUE_INCREASE_BY_DUTY = {
     "scavenge": 18,
@@ -237,6 +270,210 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def get_table_columns(conn, table_name):
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return {row["name"] for row in rows}
+
+
+def ensure_player_init_columns(conn):
+    columns = get_table_columns(conn, "player")
+
+    if "initialized" not in columns:
+        conn.execute(
+            "ALTER TABLE player ADD COLUMN initialized INTEGER NOT NULL DEFAULT 0"
+        )
+
+    if "shelter_code" not in columns:
+        conn.execute(
+            "ALTER TABLE player ADD COLUMN shelter_code TEXT NOT NULL DEFAULT ''"
+        )
+
+    if "commander_name" not in columns:
+        conn.execute(
+            "ALTER TABLE player ADD COLUMN commander_name TEXT NOT NULL DEFAULT ''"
+        )
+
+    if "difficulty" not in columns:
+        conn.execute(
+            "ALTER TABLE player ADD COLUMN difficulty TEXT NOT NULL DEFAULT '标准'"
+        )
+
+    player = conn.execute("SELECT id FROM player WHERE id = 1").fetchone()
+    if not player:
+        conn.execute(
+            """
+            INSERT INTO player (
+                id,
+                food,
+                power,
+                materials,
+                premium_currency,
+                initialized,
+                shelter_code,
+                commander_name,
+                difficulty
+            )
+            VALUES (1, 100, 100, 50, 20, 0, '', '', '标准')
+            """
+        )
+
+
+def get_player_init_profile(conn):
+    ensure_player_init_columns(conn)
+    return conn.execute(
+        """
+        SELECT initialized, shelter_code, commander_name, difficulty
+        FROM player
+        WHERE id = 1
+        """
+    ).fetchone()
+
+
+def build_init_status_payload(player):
+    return {
+        "status": "ok",
+        "initialized": bool(player["initialized"]),
+        "shelter_code": player["shelter_code"],
+        "commander_name": player["commander_name"],
+        "difficulty": player["difficulty"],
+        "intro_text": INIT_INTRO_TEXT
+    }
+
+
+def get_clean_init_text(payload, key):
+    value = payload.get(key)
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def validate_init_payload(payload):
+    shelter_code = get_clean_init_text(payload, "shelter_code")
+    commander_name = get_clean_init_text(payload, "commander_name")
+    difficulty = get_clean_init_text(payload, "difficulty") or "标准"
+
+    if not shelter_code:
+        return None, {
+            "status": "error",
+            "message": "需要填写避难所代号。"
+        }
+
+    if len(shelter_code) > SHELTER_CODE_MAX_LENGTH:
+        return None, {
+            "status": "error",
+            "message": f"避难所代号最多 {SHELTER_CODE_MAX_LENGTH} 个字。"
+        }
+
+    if not commander_name:
+        return None, {
+            "status": "error",
+            "message": "需要填写指挥官。"
+        }
+
+    if len(commander_name) > COMMANDER_NAME_MAX_LENGTH:
+        return None, {
+            "status": "error",
+            "message": f"指挥官最多 {COMMANDER_NAME_MAX_LENGTH} 个字。"
+        }
+
+    if difficulty not in DIFFICULTY_STARTING_RESOURCES:
+        return None, {
+            "status": "error",
+            "message": "难度只能选择：稳健、标准、极端。"
+        }
+
+    return {
+        "shelter_code": shelter_code,
+        "commander_name": commander_name,
+        "difficulty": difficulty
+    }, None
+
+
+def is_local_dev_request():
+    host = (request.host or "").split(":")[0].lower()
+    remote_addr = (request.remote_addr or "").lower()
+    dev_mode_enabled = (
+        app.debug
+        or app.config.get("TESTING")
+        or os.environ.get("FLASK_ENV") == "development"
+        or os.environ.get("WASTELAND_ENABLE_DEV_TOOLS") == "1"
+    )
+    return dev_mode_enabled and (
+        host in LOCAL_DEV_HOSTS or remote_addr in LOCAL_DEV_HOSTS
+    )
+
+
+def reject_non_local_dev_request():
+    return jsonify({
+        "status": "error",
+        "message": "该调试接口仅限本地开发环境使用。"
+    }), 403
+
+
+def reset_current_run_state(conn):
+    ensure_player_init_columns(conn)
+    reset_tables = ("survivors", "gacha_logs", "duty_logs", "offer_logs")
+    deleted_counts = {}
+
+    for table_name in reset_tables:
+        cursor = conn.execute(f"DELETE FROM {table_name}")
+        deleted_counts[table_name] = cursor.rowcount
+
+    cursor = conn.execute(
+        """
+        UPDATE player
+        SET food = ?,
+            power = ?,
+            materials = ?,
+            premium_currency = ?,
+            initialized = 0,
+            shelter_code = '',
+            commander_name = '',
+            difficulty = '标准'
+        WHERE id = 1
+        """,
+        (
+            PRE_INIT_PLAYER_RESOURCES["food"],
+            PRE_INIT_PLAYER_RESOURCES["power"],
+            PRE_INIT_PLAYER_RESOURCES["materials"],
+            PRE_INIT_PLAYER_RESOURCES["premium_currency"]
+        )
+    )
+
+    if cursor.rowcount == 0:
+        conn.execute(
+            """
+            INSERT INTO player (
+                id,
+                food,
+                power,
+                materials,
+                premium_currency,
+                initialized,
+                shelter_code,
+                commander_name,
+                difficulty
+            )
+            VALUES (?, ?, ?, ?, ?, 0, '', '', '标准')
+            """,
+            (
+                1,
+                PRE_INIT_PLAYER_RESOURCES["food"],
+                PRE_INIT_PLAYER_RESOURCES["power"],
+                PRE_INIT_PLAYER_RESOURCES["materials"],
+                PRE_INIT_PLAYER_RESOURCES["premium_currency"]
+            )
+        )
+
+    conn.execute(
+        """
+        DELETE FROM sqlite_sequence
+        WHERE name IN ('survivors', 'gacha_logs', 'duty_logs', 'offer_logs')
+        """
+    )
+    return deleted_counts
 
 
 def clamp_resource_value(value):
@@ -1098,11 +1335,134 @@ def resolve_duty_result(survivor, duty_type):
     )
 
 
+@app.before_request
+def require_initialized_for_gameplay():
+    allowed_paths = {
+        "/api/status",
+        "/api/init/status",
+        "/api/init",
+        "/api/dev/reset-init"
+    }
+
+    if request.method == "OPTIONS":
+        return None
+
+    if not request.path.startswith("/api/") or request.path in allowed_paths:
+        return None
+
+    conn = get_db_connection()
+    player = get_player_init_profile(conn)
+    conn.commit()
+    conn.close()
+
+    if player["initialized"]:
+        return None
+
+    return jsonify({
+        "status": "error",
+        "message": "请先完成避难所初始化。",
+        "initialized": False
+    }), 403
+
+
 @app.route("/api/status", methods=["GET"])
 def status():
     return jsonify({
         "status": "ok",
         "message": "Wasteland Shelter backend is running"
+    })
+
+
+@app.route("/api/init/status", methods=["GET"])
+def init_status():
+    conn = get_db_connection()
+    player = get_player_init_profile(conn)
+    conn.commit()
+    conn.close()
+
+    return jsonify(build_init_status_payload(player))
+
+
+@app.route("/api/init", methods=["POST"])
+def initialize_game():
+    payload = request.get_json(silent=True) or {}
+    init_data, validation_error = validate_init_payload(payload)
+
+    if validation_error:
+        return jsonify(validation_error), 400
+
+    conn = get_db_connection()
+    player = get_player_init_profile(conn)
+
+    if player["initialized"]:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "避难所已经完成初始化。"
+        }), 400
+
+    shelter_code = init_data["shelter_code"]
+    commander_name = init_data["commander_name"]
+    difficulty = init_data["difficulty"]
+    resources = DIFFICULTY_STARTING_RESOURCES[difficulty]
+    conn.execute(
+        """
+        UPDATE player
+        SET food = ?,
+            power = ?,
+            materials = ?,
+            premium_currency = ?,
+            initialized = 1,
+            shelter_code = ?,
+            commander_name = ?,
+            difficulty = ?
+        WHERE id = 1
+        """,
+        (
+            resources["food"],
+            resources["power"],
+            resources["materials"],
+            resources["premium_currency"],
+            shelter_code,
+            commander_name,
+            difficulty
+        )
+    )
+    conn.commit()
+
+    updated_player = conn.execute(
+        """
+        SELECT food, power, materials, premium_currency,
+               initialized, shelter_code, commander_name, difficulty
+        FROM player
+        WHERE id = 1
+        """
+    ).fetchone()
+    conn.close()
+
+    init_payload = build_init_status_payload(updated_player)
+    init_payload.update({
+        "message": "避难所控制权已接入。",
+        "resources": build_resource_payload(updated_player)
+    })
+    return jsonify(init_payload)
+
+
+@app.route("/api/dev/reset-init", methods=["POST"])
+def dev_reset_init():
+    if not is_local_dev_request():
+        return reject_non_local_dev_request()
+
+    conn = get_db_connection()
+    deleted_counts = reset_current_run_state(conn)
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "message": "本地调试用新开局已重置。",
+        "initialized": False,
+        "deleted": deleted_counts
     })
 
 
@@ -1714,6 +2074,9 @@ def emergency_offer_logs():
 # Local development only. Do not expose this debug endpoint in production.
 @app.route("/api/debug/reset-emergency-offer", methods=["POST"])
 def debug_reset_emergency_offer():
+    if not is_local_dev_request():
+        return reject_non_local_dev_request()
+
     conn = get_db_connection()
     cursor = conn.execute(
         """

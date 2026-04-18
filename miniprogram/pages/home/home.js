@@ -15,6 +15,14 @@ const RESOURCE_META = [
   { key: "premium_currency", label: "招募券", code: "TKT", thresholdText: "招募资源" }
 ]
 
+const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
+
+const DIFFICULTY_NOTES = {
+  "稳健": "补给更充足，适合熟悉避难所流程。",
+  "标准": "资源维持在安全线附近，适合常规轮值。",
+  "极端": "物资紧张，每一次派遣都要更谨慎。"
+}
+
 function getNumberValue(value) {
   const numberValue = Number(value)
   return isNaN(numberValue) ? null : numberValue
@@ -133,6 +141,17 @@ function buildResourceState(resources) {
   }, getResourcePanelState(resources))
 }
 
+function buildInitProfile(data) {
+  return {
+    shelter_code: data.shelter_code || "--",
+    commander_name: data.commander_name || "--",
+    difficulty: data.difficulty || "标准",
+    introText: data.intro_text || INIT_INTRO_TEXT
+  }
+}
+
+const INIT_INTRO_TEXT = "旧广播塔还剩最后一格电。登记代号，确认指挥官，补给室会按难度发放第一批物资。"
+
 function buildOfferRewardRows(offer) {
   const rewards = (offer && offer.rewards) || {}
 
@@ -154,6 +173,20 @@ function isLocalDevApi() {
 
 Page({
   data: {
+    checkingInit: false,
+    initialized: false,
+    initSubmitting: false,
+    initErrorMessage: "",
+    initProfile: buildInitProfile({}),
+    initIntroText: INIT_INTRO_TEXT,
+    initForm: {
+      shelter_code: "",
+      commander_name: "",
+      difficulty: "标准"
+    },
+    difficultyOptions: DIFFICULTY_OPTIONS,
+    difficultyIndex: 1,
+    difficultyNote: DIFFICULTY_NOTES["标准"],
     loading: false,
     errorMessage: "",
     resources: format.formatResources(),
@@ -170,14 +203,132 @@ Page({
     resourcePanelClass: "resource-status resource-status--normal",
     resourceStatusText: "等待同步",
     isLocalDev: isLocalDevApi(),
-    debugResetting: false
+    debugResetting: false,
+    debugInitResetting: false
   },
 
   onShow() {
-    this.refreshHome()
+    this.loadInitStatus()
+  },
+
+  loadInitStatus() {
+    this.setData({
+      checkingInit: !this.data.initialized,
+      initErrorMessage: ""
+    })
+
+    api.getInitStatus()
+      .then((res) => {
+        if (res.statusCode === 200 && res.data) {
+          const initialized = Boolean(res.data.initialized)
+
+          this.setData({
+            initialized,
+            initProfile: buildInitProfile(res.data),
+            initIntroText: res.data.intro_text || INIT_INTRO_TEXT
+          })
+
+          if (initialized) {
+            this.refreshHome()
+          }
+          return
+        }
+
+        this.setData({
+          initialized: false,
+          initErrorMessage: "避难所登记状态读取失败。"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          initialized: false,
+          initErrorMessage: "无法连接后端服务。"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          checkingInit: false
+        })
+      })
+  },
+
+  updateInitField(event) {
+    const field = event.currentTarget.dataset.field
+    const value = event.detail.value
+
+    this.setData({
+      [`initForm.${field}`]: value
+    })
+  },
+
+  changeDifficulty(event) {
+    const difficultyIndex = Number(event.detail.value)
+    const difficulty = DIFFICULTY_OPTIONS[difficultyIndex] || "标准"
+
+    this.setData({
+      difficultyIndex,
+      "initForm.difficulty": difficulty,
+      difficultyNote: DIFFICULTY_NOTES[difficulty]
+    })
+  },
+
+  submitInit() {
+    const form = this.data.initForm
+    const shelterCode = String(form.shelter_code || "").trim()
+    const commanderName = String(form.commander_name || "").trim()
+
+    if (!shelterCode || !commanderName) {
+      this.setData({
+        initErrorMessage: "请填写避难所代号和指挥官。"
+      })
+      return
+    }
+
+    this.setData({
+      initSubmitting: true,
+      initErrorMessage: ""
+    })
+
+    api.initializeShelter({
+        shelter_code: shelterCode,
+        commander_name: commanderName,
+        difficulty: form.difficulty
+      })
+      .then((res) => {
+        if (res.statusCode === 200 && res.data && res.data.initialized) {
+          this.setData({
+            initialized: true,
+            initProfile: buildInitProfile(res.data)
+          })
+          wx.showToast({
+            title: "避难所已接入",
+            icon: "success"
+          })
+          this.refreshHome()
+          return
+        }
+
+        this.setData({
+          initErrorMessage: (res.data && res.data.message) || "初始化失败。"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          initErrorMessage: "无法连接后端服务。"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          initSubmitting: false
+        })
+      })
   },
 
   refreshHome() {
+    if (!this.data.initialized) {
+      return
+    }
+
     this.loadResources()
     this.loadEmergencyOffer()
   },
@@ -365,6 +516,80 @@ Page({
       .finally(() => {
         this.setData({
           debugResetting: false
+        })
+      })
+  },
+
+  confirmResetInitDebug() {
+    if (!this.data.isLocalDev || this.data.debugInitResetting) {
+      return
+    }
+
+    wx.showModal({
+      title: "确认重置新开局",
+      content: "这会清空当前幸存者、招募日志、值勤日志和补给记录，并返回首次接入。仅用于本地开发。确认继续？",
+      confirmText: "确认重置",
+      cancelText: "取消",
+      success: (res) => {
+        if (res.confirm) {
+          this.resetInitDebug()
+        }
+      }
+    })
+  },
+
+  resetInitDebug() {
+    this.setData({
+      debugInitResetting: true
+    })
+
+    api.resetInitDebug()
+      .then((res) => {
+        if (res.statusCode === 200) {
+          const emptyResources = format.formatResources()
+
+          this.setData(Object.assign({
+            initialized: false,
+            initErrorMessage: "",
+            initProfile: buildInitProfile({}),
+            initForm: {
+              shelter_code: "",
+              commander_name: "",
+              difficulty: "标准"
+            },
+            difficultyIndex: 1,
+            difficultyNote: DIFFICULTY_NOTES["标准"],
+            resources: emptyResources,
+            offerVisible: false,
+            offer: null,
+            offerTriggerLabel: "",
+            offerRewardRows: [],
+            offerResultMessage: "",
+            offerErrorMessage: "",
+            offerExposed: false
+          }, buildResourceState(emptyResources)))
+          this.loadInitStatus()
+          wx.showToast({
+            title: "已回到首次接入",
+            icon: "success"
+          })
+          return
+        }
+
+        wx.showToast({
+          title: "新开局重置失败",
+          icon: "none"
+        })
+      })
+      .catch(() => {
+        wx.showToast({
+          title: "无法连接调试接口",
+          icon: "none"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          debugInitResetting: false
         })
       })
   }

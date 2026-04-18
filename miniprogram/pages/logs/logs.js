@@ -88,7 +88,11 @@ Page({
   },
 
   onShow() {
-    this.loadLogs()
+    api.ensureInitialized().then((initialized) => {
+      if (initialized) {
+        this.loadLogs()
+      }
+    })
   },
 
   loadLogs() {

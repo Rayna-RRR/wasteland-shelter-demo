@@ -76,8 +76,12 @@ Page({
     showResultCard: false
   },
 
-  onLoad() {
-    this.loadResources()
+  onShow() {
+    api.ensureInitialized().then((initialized) => {
+      if (initialized) {
+        this.loadResources()
+      }
+    })
   },
 
   loadResources() {

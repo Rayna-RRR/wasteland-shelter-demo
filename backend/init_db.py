@@ -50,6 +50,34 @@ def ensure_survivor_state_columns(cursor):
     """)
 
 
+def ensure_player_init_columns(cursor):
+    columns = get_table_columns(cursor, "player")
+
+    if "initialized" not in columns:
+        cursor.execute("""
+        ALTER TABLE player
+        ADD COLUMN initialized INTEGER NOT NULL DEFAULT 0
+        """)
+
+    if "shelter_code" not in columns:
+        cursor.execute("""
+        ALTER TABLE player
+        ADD COLUMN shelter_code TEXT NOT NULL DEFAULT ''
+        """)
+
+    if "commander_name" not in columns:
+        cursor.execute("""
+        ALTER TABLE player
+        ADD COLUMN commander_name TEXT NOT NULL DEFAULT ''
+        """)
+
+    if "difficulty" not in columns:
+        cursor.execute("""
+        ALTER TABLE player
+        ADD COLUMN difficulty TEXT NOT NULL DEFAULT '标准'
+        """)
+
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -60,9 +88,15 @@ def init_db():
         food INTEGER NOT NULL DEFAULT 100,
         power INTEGER NOT NULL DEFAULT 100,
         materials INTEGER NOT NULL DEFAULT 50,
-        premium_currency INTEGER NOT NULL DEFAULT 20
+        premium_currency INTEGER NOT NULL DEFAULT 20,
+        initialized INTEGER NOT NULL DEFAULT 0,
+        shelter_code TEXT NOT NULL DEFAULT '',
+        commander_name TEXT NOT NULL DEFAULT '',
+        difficulty TEXT NOT NULL DEFAULT '标准'
     )
     """)
+
+    ensure_player_init_columns(cursor)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS survivors (
@@ -122,8 +156,18 @@ def init_db():
 
     if not player:
         cursor.execute("""
-        INSERT INTO player (id, food, power, materials, premium_currency)
-        VALUES (1, 100, 100, 50, 20)
+        INSERT INTO player (
+            id,
+            food,
+            power,
+            materials,
+            premium_currency,
+            initialized,
+            shelter_code,
+            commander_name,
+            difficulty
+        )
+        VALUES (1, 100, 100, 50, 20, 0, '', '', '标准')
         """)
 
     conn.commit()

@@ -1,9 +1,90 @@
 <view class="page home-page">
   <view class="home-texture"></view>
+
+  <block wx:if="{{checkingInit}}">
+    <view class="header home-header">
+      <text class="header-kicker">避难所控制台</text>
+      <text class="title">信号校验中</text>
+      <text class="subtitle">正在读取避难所登记状态...</text>
+    </view>
+    <view class="section">
+      <view class="message-card">
+        <text class="muted">请稍候，控制台正在接入本地档案。</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{!initialized}}">
+    <view class="header home-header">
+      <text class="header-kicker">首次接入</text>
+      <text class="title">废土避难所</text>
+      <text class="subtitle">尘暴正在逼近，先登记你的避难所。</text>
+    </view>
+
+    <view class="section onboarding-section">
+      <view class="onboarding-card">
+        <text class="onboarding-kicker">开局档案</text>
+        <text class="onboarding-title">接管一座还在喘息的地下避难所</text>
+        <text class="onboarding-copy">{{initIntroText}}</text>
+
+        <view class="init-field">
+          <text class="init-label">避难所代号</text>
+          <input class="init-input" placeholder="例如：灰井 07" placeholder-class="init-placeholder" data-field="shelter_code" value="{{initForm.shelter_code}}" bindinput="updateInitField" />
+        </view>
+
+        <view class="init-field">
+          <text class="init-label">指挥官</text>
+          <input class="init-input" placeholder="输入你的称呼" placeholder-class="init-placeholder" data-field="commander_name" value="{{initForm.commander_name}}" bindinput="updateInitField" />
+        </view>
+
+        <view class="init-field">
+          <text class="init-label">当前难度</text>
+          <picker mode="selector" range="{{difficultyOptions}}" value="{{difficultyIndex}}" bindchange="changeDifficulty">
+            <view class="difficulty-picker">
+              <text>{{initForm.difficulty}}</text>
+              <text class="difficulty-arrow">切换</text>
+            </view>
+          </picker>
+          <text class="difficulty-note">{{difficultyNote}}</text>
+        </view>
+
+        <view wx:if="{{initErrorMessage}}" class="message-card init-error-card">
+          <text class="muted">{{initErrorMessage}}</text>
+        </view>
+
+        <button class="action-button control-button" hover-class="action-button--active" bindtap="submitInit" loading="{{initSubmitting}}" disabled="{{initSubmitting}}">接入避难所控制台</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
   <view class="header home-header">
     <text class="header-kicker">避难所控制台</text>
     <text class="title">废土避难所</text>
     <text class="subtitle">资源总览 / 值勤待命 / 补给协议</text>
+  </view>
+
+  <view class="section commander-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">避难所档案</text>
+        <text class="section-title">当前指挥</text>
+      </view>
+    </view>
+    <view class="commander-grid">
+      <view class="commander-chip">
+        <text class="commander-label">避难所代号</text>
+        <text class="commander-value">{{initProfile.shelter_code}}</text>
+      </view>
+      <view class="commander-chip">
+        <text class="commander-label">指挥官</text>
+        <text class="commander-value">{{initProfile.commander_name}}</text>
+      </view>
+      <view class="commander-chip commander-chip--wide">
+        <text class="commander-label">当前难度</text>
+        <text class="commander-value">{{initProfile.difficulty}}</text>
+      </view>
+    </view>
   </view>
 
   <view class="section resource-section">
@@ -89,6 +170,8 @@
     <view class="debug-card">
       <text class="debug-helper">仅本地开发可见，用于清空补给协议测试记录并重新触发测试流程。</text>
       <button class="debug-button" hover-class="debug-button--active" bindtap="confirmResetEmergencyOfferDebug" loading="{{debugResetting}}" disabled="{{debugResetting}}">重置补给测试状态</button>
+      <text class="debug-helper debug-helper--spaced">仅本地开发可见，用于清空当前局并返回首次接入。</text>
+      <button class="debug-button" hover-class="debug-button--active" bindtap="confirmResetInitDebug" loading="{{debugInitResetting}}" disabled="{{debugInitResetting}}">新开局重置</button>
     </view>
   </view>
 
@@ -100,4 +183,5 @@
       <navigator class="nav-card" hover-class="nav-card--active" url="/pages/logs/logs" open-type="switchTab">行动日志</navigator>
     </view>
   </view>
+  </block>
 </view>

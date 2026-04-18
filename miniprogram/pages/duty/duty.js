@@ -209,8 +209,12 @@ Page({
   },
 
   onShow() {
-    this.loadResources()
-    this.loadSurvivors()
+    api.ensureInitialized().then((initialized) => {
+      if (initialized) {
+        this.loadResources()
+        this.loadSurvivors()
+      }
+    })
   },
 
   loadResources() {

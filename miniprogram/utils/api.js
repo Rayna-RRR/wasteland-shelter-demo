@@ -16,6 +16,43 @@ function getResources() {
   return request("/api/resources", "GET")
 }
 
+function getInitStatus() {
+  return request("/api/init/status", "GET")
+}
+
+function initializeShelter(data) {
+  return request("/api/init", "POST", data)
+}
+
+function ensureInitialized() {
+  return getInitStatus()
+    .then((res) => {
+      const initialized = Boolean(res.statusCode === 200 && res.data && res.data.initialized)
+
+      if (!initialized) {
+        wx.showToast({
+          title: "请先接入避难所",
+          icon: "none"
+        })
+        wx.switchTab({
+          url: "/pages/home/home"
+        })
+      }
+
+      return initialized
+    })
+    .catch(() => {
+      wx.showToast({
+        title: "无法读取避难所状态",
+        icon: "none"
+      })
+      wx.switchTab({
+        url: "/pages/home/home"
+      })
+      return false
+    })
+}
+
 function pullGacha() {
   return request("/api/gacha", "POST")
 }
@@ -64,7 +101,14 @@ function resetEmergencyOfferDebug() {
   return request("/api/debug/reset-emergency-offer", "POST")
 }
 
+function resetInitDebug() {
+  return request("/api/dev/reset-init", "POST")
+}
+
 module.exports = {
+  getInitStatus,
+  initializeShelter,
+  ensureInitialized,
   getResources,
   pullGacha,
   getSurvivors,
@@ -77,5 +121,6 @@ module.exports = {
   closeEmergencyOffer,
   purchaseEmergencyOffer,
   getEmergencyOfferLogs,
-  resetEmergencyOfferDebug
+  resetEmergencyOfferDebug,
+  resetInitDebug
 }

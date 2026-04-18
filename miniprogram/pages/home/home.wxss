@@ -63,6 +63,130 @@
   margin-bottom: 0;
 }
 
+.onboarding-card {
+  box-sizing: border-box;
+  padding: 30rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.34);
+  border-left: 8rpx solid var(--rust-red);
+  border-radius: 8rpx;
+  background:
+    linear-gradient(135deg, rgba(139, 58, 58, 0.22), transparent 46%),
+    rgba(15, 14, 13, 0.94);
+  box-shadow: 0 18rpx 44rpx rgba(0, 0, 0, 0.36);
+}
+
+.onboarding-kicker {
+  display: block;
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.onboarding-title {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--base-text);
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.onboarding-copy {
+  display: block;
+  margin-top: 12rpx;
+  color: rgba(211, 211, 211, 0.82);
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.init-field {
+  margin-top: 24rpx;
+}
+
+.init-label {
+  display: block;
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.init-input,
+.difficulty-picker {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 76rpx;
+  margin-top: 12rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.30);
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--base-text);
+  font-size: 28rpx;
+  line-height: 76rpx;
+}
+
+.init-placeholder {
+  color: rgba(155, 146, 134, 0.72);
+}
+
+.difficulty-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.difficulty-arrow {
+  color: var(--muted-text);
+  font-size: 24rpx;
+}
+
+.difficulty-note {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--muted-text);
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.init-error-card {
+  margin-top: 22rpx;
+}
+
+.commander-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.commander-chip {
+  box-sizing: border-box;
+  width: calc(50% - 7rpx);
+  min-height: 96rpx;
+  padding: 16rpx 18rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.26);
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.commander-chip--wide {
+  width: 100%;
+}
+
+.commander-label {
+  display: block;
+  color: var(--muted-text);
+  font-size: 22rpx;
+}
+
+.commander-value {
+  display: block;
+  margin-top: 8rpx;
+  color: var(--desert-yellow);
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .resource-status {
   box-sizing: border-box;
   min-height: 44rpx;
@@ -411,6 +535,10 @@
   color: var(--muted-text);
   font-size: 24rpx;
   line-height: 1.5;
+}
+
+.debug-helper--spaced {
+  margin-top: 22rpx;
 }
 
 .debug-button {
