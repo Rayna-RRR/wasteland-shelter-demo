@@ -17,7 +17,7 @@
       <text class="muted">{{gachaErrorMessage}}</text>
     </view>
     <block wx:elif="{{gachaLogs.length}}">
-      <view wx:for="{{gachaLogs}}" wx:key="id" class="{{item.logCardClass}}">
+      <view wx:for="{{gachaVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
           <text class="{{item.tagClass}}">{{item.rarityText}}</text>
           <text class="log-time">{{item.created_at}}</text>
@@ -33,7 +33,12 @@
             <text class="log-detail-value">{{item.role}}</text>
           </view>
         </view>
+        <view wx:if="{{item.duplicate}}" class="duplicate-log-panel">
+          <text class="duplicate-log-title">重复信号已转化</text>
+          <text class="duplicate-log-copy">{{item.compensation_text}}</text>
+        </view>
       </view>
+      <button wx:if="{{gachaHasHiddenLogs}}" class="log-toggle-button" hover-class="log-toggle-button--active" bindtap="toggleGachaLogs">{{gachaToggleText}}</button>
     </block>
     <view wx:else class="card">
       <text class="muted">暂无招募日志</text>
@@ -52,7 +57,7 @@
       <text class="muted">{{dutyErrorMessage}}</text>
     </view>
     <block wx:elif="{{dutyLogs.length}}">
-      <view wx:for="{{dutyLogs}}" wx:key="id" class="{{item.logCardClass}}">
+      <view wx:for="{{dutyVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
           <text class="{{item.tagClass}}">{{item.markerText}}</text>
           <text class="log-time">{{item.created_at}}</text>
@@ -65,6 +70,7 @@
           <text class="resource-change">材料 {{item.materials_change_text}}</text>
         </view>
       </view>
+      <button wx:if="{{dutyHasHiddenLogs}}" class="log-toggle-button" hover-class="log-toggle-button--active" bindtap="toggleDutyLogs">{{dutyToggleText}}</button>
     </block>
     <view wx:else class="card">
       <text class="muted">暂无值勤日志</text>
@@ -83,7 +89,7 @@
       <text class="muted">{{offerErrorMessage}}</text>
     </view>
     <block wx:elif="{{offerLogs.length}}">
-      <view wx:for="{{offerLogs}}" wx:key="id" class="{{item.logCardClass}}">
+      <view wx:for="{{offerVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
           <text class="{{item.tagClass}}">{{item.action_type}}</text>
           <text class="log-time">{{item.created_at}}</text>
@@ -91,10 +97,13 @@
         <text class="log-title">{{item.markerText}}</text>
         <view class="offer-record-panel">
           <text class="offer-record-line">压力来源：{{item.trigger_reason}}</text>
+          <text class="offer-record-line">触发节点：{{item.action_count_text}}</text>
           <text class="offer-record-line">资源快照：{{item.resource_snapshot_text}}</text>
           <text class="offer-record-line">幸存者数量：{{item.survivor_count_text}}</text>
+          <text class="offer-record-line offer-record-line--result">{{item.outcome_text}}</text>
         </view>
       </view>
+      <button wx:if="{{offerHasHiddenLogs}}" class="log-toggle-button" hover-class="log-toggle-button--active" bindtap="toggleOfferLogs">{{offerToggleText}}</button>
     </block>
     <view wx:else class="card">
       <text class="muted">暂无补给日志</text>

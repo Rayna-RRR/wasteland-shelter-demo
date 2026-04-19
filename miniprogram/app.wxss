@@ -12,11 +12,14 @@ page {
   --hazard-orange: #FF5722;
 
   min-height: 100vh;
-  background-color: var(--base-background);
+  background-color: #100f0e;
   background-image:
-    radial-gradient(circle at 18% 0%, rgba(193, 154, 107, 0.13) 0%, transparent 34%),
-    radial-gradient(circle at 84% 6%, rgba(139, 58, 58, 0.18) 0%, transparent 34%),
-    linear-gradient(180deg, #1A1A1A 0%, #11100f 56%, #070707 100%);
+    radial-gradient(circle at 18% 0%, rgba(193, 154, 107, 0.11) 0%, rgba(193, 154, 107, 0) 42%),
+    radial-gradient(circle at 84% 6%, rgba(139, 58, 58, 0.14) 0%, rgba(139, 58, 58, 0) 40%),
+    linear-gradient(180deg, #1A1A1A 0%, #151311 58%, #100f0e 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
   color: var(--base-text);
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 }
@@ -199,14 +202,14 @@ button::after {
 
 .global-noise-overlay {
   pointer-events: none;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  height: 100vh;
   z-index: 0;
-  opacity: 0.08;
+  opacity: 0.035;
   background-image:
-    repeating-linear-gradient(0deg, rgba(211, 211, 211, 0.08) 0, rgba(211, 211, 211, 0.08) 1rpx, transparent 1rpx, transparent 10rpx),
-    repeating-linear-gradient(90deg, rgba(193, 154, 107, 0.04) 0, rgba(193, 154, 107, 0.04) 1rpx, transparent 1rpx, transparent 24rpx);
+    linear-gradient(115deg, rgba(193, 154, 107, 0.05), transparent 42%, rgba(139, 58, 58, 0.045)),
+    repeating-linear-gradient(90deg, rgba(193, 154, 107, 0.03) 0, rgba(193, 154, 107, 0.03) 1rpx, transparent 1rpx, transparent 32rpx);
 }

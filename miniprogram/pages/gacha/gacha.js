@@ -52,6 +52,7 @@ function buildSurvivorResult(data) {
     rarityKey,
     rarityBadgeClass: `recruit-rarity recruit-rarity--${rarityKey}`,
     resultCardClass: duplicate ? `card result-card result-card--${rarityKey} result-card--duplicate` : `card result-card result-card--${rarityKey}`,
+    resultSignalText: duplicate ? "重复信号回收" : `${survivor.rarity} 信号锁定`,
     role: survivor.role,
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
@@ -60,6 +61,8 @@ function buildSurvivorResult(data) {
     injuredTag: survivor.injured_tag || "",
     gachaIntroLine: duplicate ? "" : survivor.gacha_intro_line || "",
     duplicate,
+    compensationAmountText: duplicate ? `+${compensationAmount}` : "",
+    compensationResourceText: duplicate ? "材料补偿" : "",
     compensationText: duplicate ? `已拥有，转化为材料 +${compensationAmount}` : ""
   }
 }

@@ -7,10 +7,30 @@ const dutyLabels = {
 }
 
 const dutyTypes = [
-  { type: "scavenge", label: dutyLabels.scavenge },
-  { type: "generate_power", label: dutyLabels.generate_power },
-  { type: "cook", label: dutyLabels.cook },
-  { type: "guard", label: dutyLabels.guard }
+  {
+    type: "scavenge",
+    label: dutyLabels.scavenge,
+    buttonLabel: "外出搜集 · 高风险",
+    riskLabel: "高风险"
+  },
+  {
+    type: "generate_power",
+    label: dutyLabels.generate_power,
+    buttonLabel: dutyLabels.generate_power,
+    riskLabel: ""
+  },
+  {
+    type: "cook",
+    label: dutyLabels.cook,
+    buttonLabel: dutyLabels.cook,
+    riskLabel: ""
+  },
+  {
+    type: "guard",
+    label: dutyLabels.guard,
+    buttonLabel: "夜间守卫 · 高风险",
+    riskLabel: "高风险"
+  }
 ]
 
 const moodLabels = {

@@ -168,6 +168,17 @@
   <view wx:if="{{isLocalDev}}" class="section debug-section">
     <text class="section-title">本地调试</text>
     <view class="debug-card">
+      <view class="debug-mode-panel">
+        <view>
+          <text class="debug-mode-title">录屏模式</text>
+          <text class="debug-helper">开启后，前两次招募固定为 SSR 周萤（仅本地录屏用）。</text>
+          <text wx:if="{{demoModeErrorMessage}}" class="debug-error">{{demoModeErrorMessage}}</text>
+        </view>
+        <view class="debug-mode-action">
+          <text class="debug-mode-state">当前：{{demoModeEnabled ? "开启" : "关闭"}}</text>
+          <button class="debug-button debug-mode-button" hover-class="debug-button--active" bindtap="toggleDemoModeDebug" loading="{{demoModeLoading}}" disabled="{{demoModeLoading}}">录屏模式：{{demoModeEnabled ? "关闭" : "开启"}}</button>
+        </view>
+      </view>
       <text class="debug-helper">仅本地开发可见，用于清空补给协议测试记录并重新触发测试流程。</text>
       <button class="debug-button" hover-class="debug-button--active" bindtap="confirmResetEmergencyOfferDebug" loading="{{debugResetting}}" disabled="{{debugResetting}}">重置补给测试状态</button>
       <text class="debug-helper debug-helper--spaced">仅本地开发可见，用于清空当前局并返回首次接入。</text>

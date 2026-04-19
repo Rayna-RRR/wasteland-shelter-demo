@@ -18,9 +18,9 @@ const RESOURCE_META = [
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
 
 const DIFFICULTY_NOTES = {
-  "稳健": "补给更充足，适合熟悉避难所流程。",
-  "标准": "资源维持在安全线附近，适合常规轮值。",
-  "极端": "物资紧张，每一次派遣都要更谨慎。"
+  "稳健": "开局配给：食物120 / 电力110 / 材料90 / 招募券60，适合熟悉流程。",
+  "标准": "开局配给：食物100 / 电力100 / 材料70 / 招募券40，适合常规轮值。",
+  "极端": "开局配给：食物70 / 电力75 / 材料45 / 招募券20，资源压力会更早出现。"
 }
 
 function getNumberValue(value) {
@@ -203,12 +203,18 @@ Page({
     resourcePanelClass: "resource-status resource-status--normal",
     resourceStatusText: "等待同步",
     isLocalDev: isLocalDevApi(),
+    demoModeLoading: false,
+    demoModeEnabled: false,
+    demoModeErrorMessage: "",
     debugResetting: false,
     debugInitResetting: false
   },
 
   onShow() {
     this.loadInitStatus()
+    if (this.data.isLocalDev) {
+      this.loadDemoModeStatus()
+    }
   },
 
   loadInitStatus() {
@@ -454,6 +460,81 @@ Page({
       .finally(() => {
         this.setData({
           offerPurchasing: false
+        })
+      })
+  },
+
+  loadDemoModeStatus() {
+    this.setData({
+      demoModeLoading: true,
+      demoModeErrorMessage: ""
+    })
+
+    api.getDemoModeDebug()
+      .then((res) => {
+        if (res.statusCode === 200 && res.data) {
+          this.setData({
+            demoModeEnabled: Boolean(res.data.enabled)
+          })
+          return
+        }
+
+        this.setData({
+          demoModeEnabled: false,
+          demoModeErrorMessage: "录屏模式状态读取失败"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          demoModeEnabled: false,
+          demoModeErrorMessage: "无法连接录屏模式调试接口"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          demoModeLoading: false
+        })
+      })
+  },
+
+  toggleDemoModeDebug() {
+    if (!this.data.isLocalDev || this.data.demoModeLoading) {
+      return
+    }
+
+    const nextEnabled = !this.data.demoModeEnabled
+
+    this.setData({
+      demoModeLoading: true,
+      demoModeErrorMessage: ""
+    })
+
+    api.setDemoModeDebug(nextEnabled)
+      .then((res) => {
+        if (res.statusCode === 200 && res.data) {
+          const enabled = Boolean(res.data.enabled)
+          this.setData({
+            demoModeEnabled: enabled
+          })
+          wx.showToast({
+            title: enabled ? "录屏模式已开启" : "录屏模式已关闭",
+            icon: "none"
+          })
+          return
+        }
+
+        this.setData({
+          demoModeErrorMessage: "录屏模式切换失败"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          demoModeErrorMessage: "无法连接录屏模式调试接口"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          demoModeLoading: false
         })
       })
   },

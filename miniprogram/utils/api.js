@@ -105,6 +105,16 @@ function resetInitDebug() {
   return request("/api/dev/reset-init", "POST")
 }
 
+function getDemoModeDebug() {
+  return request("/api/dev/demo-mode", "GET")
+}
+
+function setDemoModeDebug(enabled) {
+  return request("/api/dev/demo-mode", "POST", {
+    enabled
+  })
+}
+
 module.exports = {
   getInitStatus,
   initializeShelter,
@@ -122,5 +132,7 @@ module.exports = {
   purchaseEmergencyOffer,
   getEmergencyOfferLogs,
   resetEmergencyOfferDebug,
-  resetInitDebug
+  resetInitDebug,
+  getDemoModeDebug,
+  setDemoModeDebug
 }

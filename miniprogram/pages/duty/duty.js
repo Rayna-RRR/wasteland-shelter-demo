@@ -1,6 +1,13 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
 
+const RESOURCE_DELTA_META = [
+  { key: "food_change", label: "食物" },
+  { key: "power_change", label: "电力" },
+  { key: "materials_change", label: "材料" },
+  { key: "premium_currency_change", label: "招募券" }
+]
+
 function getStateTag(fatigue, health) {
   if (health <= 30) {
     return "重伤"
@@ -67,6 +74,113 @@ function formatState(fatigue, health) {
     stateTag: getStateTag(fatigueValue, healthValue),
     stateTagClass: getStateTagClass(fatigueValue, healthValue)
   }
+}
+
+function getNumberValue(value) {
+  const numberValue = Number(value)
+  return isNaN(numberValue) ? 0 : numberValue
+}
+
+function buildDeltaClass(baseClass, tone) {
+  return `${baseClass} ${baseClass}--${tone}`
+}
+
+function buildResourceDeltaRows(result) {
+  return RESOURCE_DELTA_META.map((item) => {
+    const value = getNumberValue(result[item.key])
+
+    if (value === 0) {
+      return null
+    }
+
+    const tone = value > 0 ? "gain" : "loss"
+    return {
+      label: item.label,
+      value,
+      valueText: format.formatChange(value),
+      tone,
+      cardClass: buildDeltaClass("delta-card", tone),
+      valueClass: buildDeltaClass("delta-value", tone)
+    }
+  }).filter(Boolean)
+}
+
+function getStateChangeValue(stateChange, survivor, previousSurvivor, key) {
+  const directValue = stateChange && stateChange[key]
+
+  if (directValue !== undefined) {
+    return getNumberValue(directValue)
+  }
+
+  if (!previousSurvivor) {
+    return 0
+  }
+
+  const stateKey = key === "fatigue_change" ? "fatigue" : "health"
+  return getNumberValue(survivor[stateKey]) - getNumberValue(previousSurvivor[stateKey])
+}
+
+function buildStateDeltaRows(result, survivor, previousSurvivor) {
+  const stateChange = result.survivor_state || result.survivor_state_change || {}
+  const fatigueChange = getStateChangeValue(
+    stateChange,
+    survivor,
+    previousSurvivor,
+    "fatigue_change"
+  )
+  const healthChange = getStateChangeValue(
+    stateChange,
+    survivor,
+    previousSurvivor,
+    "health_change"
+  )
+
+  return [
+    {
+      label: "疲劳",
+      value: fatigueChange,
+      tone: fatigueChange > 0 ? "loss" : "gain"
+    },
+    {
+      label: "健康",
+      value: healthChange,
+      tone: healthChange > 0 ? "gain" : "loss"
+    }
+  ].filter((item) => item.value !== 0).map((item) => {
+    return {
+      label: item.label,
+      value: item.value,
+      valueText: format.formatChange(item.value),
+      tone: item.tone,
+      cardClass: buildDeltaClass("delta-card", item.tone),
+      valueClass: buildDeltaClass("delta-value", item.tone)
+    }
+  })
+}
+
+function buildResultSignalText(resourceDeltaRows, stateDeltaRows) {
+  const hasResourceGain = resourceDeltaRows.some((item) => item.tone === "gain")
+  const hasResourceLoss = resourceDeltaRows.some((item) => item.tone === "loss")
+  const hasStateCost = stateDeltaRows.some((item) => item.tone === "loss")
+  const hasStateRecovery = stateDeltaRows.some((item) => item.tone === "gain")
+
+  if (hasResourceGain && hasStateCost) {
+    return "收益与代价"
+  }
+
+  if (hasResourceGain) {
+    return "行动收益"
+  }
+
+  if (hasStateRecovery && !hasResourceLoss) {
+    return "状态恢复"
+  }
+
+  if (hasResourceLoss || hasStateCost) {
+    return "行动消耗"
+  }
+
+  return "行动记录"
 }
 
 function normalizeSurvivorProfile(survivor, fallbackStateTag) {
@@ -169,13 +283,16 @@ function getRestErrorMessage(res) {
   return message || "休整失败"
 }
 
-function buildResultPanel(result, survivor, dutyLabel) {
+function buildResultPanel(result, survivor, dutyLabel, previousSurvivor) {
   const survivorState = formatState(survivor.fatigue, survivor.health)
   const profile = normalizeSurvivorProfile(survivor, survivorState.stateTag)
+  const resourceDeltaRows = buildResourceDeltaRows(result)
+  const stateDeltaRows = buildStateDeltaRows(result, survivor, previousSurvivor)
 
   return {
     survivorName: survivor.name || "幸存者",
     dutyLabel,
+    resultSignalText: buildResultSignalText(resourceDeltaRows, stateDeltaRows),
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
     archiveLine: profile.archiveLine,
@@ -185,6 +302,10 @@ function buildResultPanel(result, survivor, dutyLabel) {
     foodChange: format.formatChange(result.food_change),
     powerChange: format.formatChange(result.power_change),
     materialsChange: format.formatChange(result.materials_change),
+    resourceDeltaRows,
+    stateDeltaRows,
+    hasResourceDeltas: resourceDeltaRows.length > 0,
+    hasStateDeltas: stateDeltaRows.length > 0,
     fatigue: survivorState.fatigue,
     health: survivorState.health,
     fatigueClass: survivorState.fatigueClass,
@@ -205,7 +326,10 @@ Page({
     selectedSurvivorId: null,
     selectedSurvivor: null,
     dutyTypes: format.dutyTypes,
-    dutyResult: null
+    dutyResult: null,
+    offerHintVisible: false,
+    offerHintText: "",
+    offerHintTriggerLabel: ""
   },
 
   onShow() {
@@ -310,7 +434,10 @@ Page({
 
     this.setData({
       assigning: true,
-      errorMessage: ""
+      errorMessage: "",
+      offerHintVisible: false,
+      offerHintText: "",
+      offerHintTriggerLabel: ""
     })
 
     api.assignDuty({
@@ -321,9 +448,15 @@ Page({
         if (res.statusCode === 200 && res.data && res.data.result) {
           const result = res.data.result
           const survivor = res.data.survivor || {}
+          const previousSurvivor = this.data.selectedSurvivor
 
           this.setData({
-            dutyResult: buildResultPanel(result, survivor, format.getDutyLabel(dutyType))
+            dutyResult: buildResultPanel(
+              result,
+              survivor,
+              format.getDutyLabel(dutyType),
+              previousSurvivor
+            )
           })
 
           wx.showToast({
@@ -332,6 +465,7 @@ Page({
           })
           this.loadResources()
           this.loadSurvivors()
+          this.checkEmergencyOfferAfterDuty()
           return
         }
 
@@ -361,6 +495,50 @@ Page({
       })
   },
 
+  checkEmergencyOfferAfterDuty() {
+    api.getEmergencyOfferState()
+      .then((res) => {
+        if (!(res.statusCode === 200 && res.data && res.data.active)) {
+          this.setData({
+            offerHintVisible: false,
+            offerHintText: "",
+            offerHintTriggerLabel: ""
+          })
+          return
+        }
+
+        const triggerLabel = format.getTriggerReasonLabel(res.data.trigger_reason)
+        const hintText = `检测到${triggerLabel}，补给室已开放战备补给协议。`
+
+        this.setData({
+          offerHintVisible: true,
+          offerHintText: hintText,
+          offerHintTriggerLabel: triggerLabel
+        })
+
+        wx.showModal({
+          title: "补给室来讯",
+          content: `${hintText} 是否返回首页处理？`,
+          confirmText: "去处理",
+          cancelText: "稍后",
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              wx.switchTab({
+                url: "/pages/home/home"
+              })
+            }
+          }
+        })
+      })
+      .catch(() => {})
+  },
+
+  goHomeForOffer() {
+    wx.switchTab({
+      url: "/pages/home/home"
+    })
+  },
+
   restSurvivor(event) {
     if (this.data.assigning) {
       return
@@ -382,7 +560,10 @@ Page({
 
     this.setData({
       assigning: true,
-      errorMessage: ""
+      errorMessage: "",
+      offerHintVisible: false,
+      offerHintText: "",
+      offerHintTriggerLabel: ""
     })
 
     api.restSurvivor({
@@ -392,9 +573,15 @@ Page({
         if (res.statusCode === 200 && res.data && res.data.result) {
           const result = res.data.result
           const survivor = res.data.survivor || {}
+          const previousSurvivor = this.data.selectedSurvivor
 
           this.setData({
-            dutyResult: buildResultPanel(result, survivor, "休整")
+            dutyResult: buildResultPanel(
+              result,
+              survivor,
+              "休整",
+              previousSurvivor
+            )
           })
 
           wx.showToast({

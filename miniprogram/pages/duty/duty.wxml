@@ -39,27 +39,33 @@
   <view wx:if="{{selectedSurvivor}}" class="section">
     <text class="section-title">当前选择</text>
     <view class="{{selectedSurvivor.selectedPanelClass}}">
-      <view class="selected-status-line">
-        <text class="selected-kicker">派遣对象已锁定</text>
-        <text class="{{selectedSurvivor.stateTagClass}}">{{selectedSurvivor.stateTag}}</text>
-      </view>
-      <view class="selected-profile">
-        <view class="survivor-mark">
+      <view class="selected-profile character-card-head">
+        <view class="survivor-mark survivor-mark--featured">
           <text class="survivor-mark-name">{{selectedSurvivor.name}}</text>
         </view>
         <view class="selected-profile-main">
-          <view class="survivor-heading">
-            <text class="entity-title">{{selectedSurvivor.name}}</text>
+          <text class="survivor-name survivor-name--featured">{{selectedSurvivor.name}}</text>
+          <view class="survivor-meta-row">
             <text class="{{selectedSurvivor.rarityBadgeClass}}">{{selectedSurvivor.rarity}}</text>
+            <text class="role-pill">{{selectedSurvivor.role}}</text>
           </view>
-          <view class="survivor-tags">
-            <text class="survivor-tag">职业：{{selectedSurvivor.role}}</text>
-            <text class="survivor-tag">特质：{{selectedSurvivor.traitLabel}}</text>
-          </view>
-          <text wx:if="{{selectedSurvivor.workStyleLine}}" class="survivor-note">作风：{{selectedSurvivor.workStyleLine}}</text>
-          <text wx:if="{{selectedSurvivor.archiveLine}}" class="survivor-note">档案：{{selectedSurvivor.archiveLine}}</text>
-          <text wx:if="{{selectedSurvivor.injuredTag}}" class="survivor-note survivor-note--danger">伤情：{{selectedSurvivor.injuredTag}}</text>
         </view>
+        <text class="{{selectedSurvivor.stateTagClass}}">{{selectedSurvivor.stateTag}}</text>
+      </view>
+      <view wx:if="{{selectedSurvivor.traitLabel}}" class="trait-callout">
+        <text class="trait-kicker">特质</text>
+        <text class="trait-value">{{selectedSurvivor.traitLabel}}</text>
+      </view>
+      <view class="flavor-panel">
+        <view wx:if="{{selectedSurvivor.workStyleLine}}" class="flavor-row">
+          <text class="flavor-label">作风</text>
+          <text class="flavor-text">{{selectedSurvivor.workStyleLine}}</text>
+        </view>
+        <view wx:if="{{selectedSurvivor.archiveLine}}" class="flavor-row">
+          <text class="flavor-label">档案</text>
+          <text class="flavor-text">{{selectedSurvivor.archiveLine}}</text>
+        </view>
+        <text wx:if="{{selectedSurvivor.injuredTag}}" class="survivor-note survivor-note--danger">伤情：{{selectedSurvivor.injuredTag}}</text>
       </view>
       <view class="state-panel">
         <view class="state-row">
@@ -73,6 +79,7 @@
       </view>
       <view class="duty-button-list">
         <text class="dispatch-label">行动指令</text>
+        <text class="dispatch-helper">外出搜集和夜间守卫为高风险任务，会更明显地增加疲劳，也可能带来伤情。</text>
         <button
           class="duty-button rest-button"
           hover-class="duty-button--active"
@@ -92,24 +99,62 @@
           bindtap="assignDuty"
           loading="{{assigning}}"
           disabled="{{assigning}}"
-        >{{duty.label}}</button>
+        >{{duty.buttonLabel}}</button>
       </view>
     </view>
   </view>
 
   <view wx:if="{{dutyResult}}" class="section">
     <text class="section-title">值勤结果</text>
-    <view class="card result-card">
-      <text class="entity-title">{{dutyResult.survivorName}}完成{{dutyResult.dutyLabel}}</text>
-      <text wx:if="{{dutyResult.workStyleLine}}" class="field-row">作风：{{dutyResult.workStyleLine}}</text>
-      <text wx:if="{{dutyResult.archiveLine}}" class="field-row">档案：{{dutyResult.archiveLine}}</text>
-      <text wx:if="{{dutyResult.injuredTag}}" class="field-row">伤情：{{dutyResult.injuredTag}}</text>
-      <text class="field-row">{{dutyResult.resultText}}</text>
-      <text class="field-row">食物：{{dutyResult.foodChange}}</text>
-      <text class="field-row">电力：{{dutyResult.powerChange}}</text>
-      <text class="field-row">材料：{{dutyResult.materialsChange}}</text>
+    <view class="card result-card duty-result-card">
+      <view class="duty-result-head">
+        <view>
+          <text class="result-kicker">行动回报</text>
+          <text class="result-title">{{dutyResult.survivorName}} · {{dutyResult.dutyLabel}}</text>
+        </view>
+        <view class="result-status-stack">
+          <text class="result-signal-badge">{{dutyResult.resultSignalText}}</text>
+          <text class="{{dutyResult.stateTagClass}}">{{dutyResult.stateTag}}</text>
+        </view>
+      </view>
+      <text class="result-copy">{{dutyResult.resultText}}</text>
+      <view class="result-feedback-panel">
+        <view class="feedback-block">
+          <text class="feedback-title">资源变化</text>
+          <view wx:if="{{dutyResult.hasResourceDeltas}}" class="delta-grid">
+            <view wx:for="{{dutyResult.resourceDeltaRows}}" wx:key="label" class="{{item.cardClass}}">
+              <text class="delta-label">{{item.label}}</text>
+              <text class="{{item.valueClass}}">{{item.valueText}}</text>
+            </view>
+          </view>
+          <text wx:else class="delta-empty">资源未变化</text>
+        </view>
+        <view wx:if="{{dutyResult.hasStateDeltas}}" class="feedback-block">
+          <text class="feedback-title">幸存者状态</text>
+          <view class="delta-grid">
+            <view wx:for="{{dutyResult.stateDeltaRows}}" wx:key="label" class="{{item.cardClass}}">
+              <text class="delta-label">{{item.label}}</text>
+              <text class="{{item.valueClass}}">{{item.valueText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{dutyResult.traitLabel}}" class="trait-callout trait-callout--compact">
+        <text class="trait-kicker">特质</text>
+        <text class="trait-value">{{dutyResult.traitLabel}}</text>
+      </view>
+      <view class="flavor-panel">
+        <view wx:if="{{dutyResult.workStyleLine}}" class="flavor-row">
+          <text class="flavor-label">作风</text>
+          <text class="flavor-text">{{dutyResult.workStyleLine}}</text>
+        </view>
+        <view wx:if="{{dutyResult.archiveLine}}" class="flavor-row">
+          <text class="flavor-label">档案</text>
+          <text class="flavor-text">{{dutyResult.archiveLine}}</text>
+        </view>
+        <text wx:if="{{dutyResult.injuredTag}}" class="survivor-note survivor-note--danger">伤情：{{dutyResult.injuredTag}}</text>
+      </view>
       <view class="state-panel">
-        <text class="{{dutyResult.stateTagClass}}">{{dutyResult.stateTag}}</text>
         <view class="state-row">
           <text class="state-label">疲劳</text>
           <text class="{{dutyResult.fatigueClass}}">{{dutyResult.fatigue}}</text>
@@ -119,6 +164,14 @@
           <text class="{{dutyResult.healthClass}}">{{dutyResult.health}}</text>
         </view>
       </view>
+    </view>
+    <view wx:if="{{offerHintVisible}}" class="offer-hint-card">
+      <view>
+        <text class="offer-hint-kicker">补给室来讯</text>
+        <text class="offer-hint-copy">{{offerHintText}}</text>
+        <text class="offer-hint-source">压力来源：{{offerHintTriggerLabel}}</text>
+      </view>
+      <button class="offer-hint-button" hover-class="offer-hint-button--active" bindtap="goHomeForOffer">去首页处理</button>
     </view>
   </view>
 
@@ -138,25 +191,34 @@
         data-survivor-id="{{survivor.id}}"
         bindtap="selectSurvivor"
       >
-        <view class="survivor-card-topline">
-          <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
-          <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
-        </view>
-        <view class="survivor-profile-row">
+        <view class="survivor-profile-row character-card-head">
           <view class="survivor-mark survivor-mark--compact">
             <text class="survivor-mark-name">{{survivor.name}}</text>
           </view>
           <view class="survivor-profile-main">
-            <text class="entity-title">{{survivor.name}}</text>
-            <view class="survivor-tags">
-              <text class="survivor-tag">职业：{{survivor.role}}</text>
-              <text class="survivor-tag">特质：{{survivor.traitLabel}}</text>
+            <text class="survivor-name">{{survivor.name}}</text>
+            <view class="survivor-meta-row">
+              <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
+              <text class="role-pill">{{survivor.role}}</text>
             </view>
           </view>
+          <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
         </view>
-        <text wx:if="{{survivor.workStyleLine}}" class="survivor-note">作风：{{survivor.workStyleLine}}</text>
-        <text wx:if="{{survivor.archiveLine}}" class="survivor-note">档案：{{survivor.archiveLine}}</text>
-        <text wx:if="{{survivor.injuredTag}}" class="survivor-note survivor-note--danger">伤情：{{survivor.injuredTag}}</text>
+        <view wx:if="{{survivor.traitLabel}}" class="trait-callout trait-callout--compact">
+          <text class="trait-kicker">特质</text>
+          <text class="trait-value">{{survivor.traitLabel}}</text>
+        </view>
+        <view class="flavor-panel flavor-panel--compact">
+          <view wx:if="{{survivor.workStyleLine}}" class="flavor-row">
+            <text class="flavor-label">作风</text>
+            <text class="flavor-text">{{survivor.workStyleLine}}</text>
+          </view>
+          <view wx:if="{{survivor.archiveLine}}" class="flavor-row">
+            <text class="flavor-label">档案</text>
+            <text class="flavor-text">{{survivor.archiveLine}}</text>
+          </view>
+          <text wx:if="{{survivor.injuredTag}}" class="survivor-note survivor-note--danger">伤情：{{survivor.injuredTag}}</text>
+        </view>
         <view class="state-panel">
           <view class="state-row">
             <text class="state-label">疲劳</text>

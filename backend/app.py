@@ -117,6 +117,11 @@ DUTY_NARRATIVE_FOCUS = {
 
 DUTY_TYPES = ["scavenge", "generate_power", "cook", "guard"]
 GACHA_DUPLICATE_MATERIAL_COMPENSATION = 8
+LOCAL_DEMO_GACHA_SEQUENCE = [
+    {"rarity": "SSR", "name": "周萤"},
+    {"rarity": "SSR", "name": "周萤"}
+]
+DEMO_MODE_ENABLED = False
 DUTY_OPERATING_COSTS = {
     "scavenge": {
         "food": 0,
@@ -207,6 +212,14 @@ TEAM_CRITICAL_HEALTH_THRESHOLD = 30
 RECENT_DUTY_LOG_LIMIT = 3
 LOW_EFFICIENCY_TRIGGER_COUNT = 2
 LOW_EFFICIENCY_TOTAL_CHANGE_THRESHOLD = 2
+EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW = 3
+SEVERE_RESOURCE_THRESHOLDS = {
+    "food": 35,
+    "power": 35,
+    "materials": 10
+}
+SEVERE_TEAM_HEALTH_THRESHOLD = 20
+SEVERE_TEAM_FATIGUE_THRESHOLD = 90
 
 EMERGENCY_OFFER_ID = "emergency_supply_v1"
 EMERGENCY_OFFER = {
@@ -317,6 +330,15 @@ def ensure_player_init_columns(conn):
             )
             VALUES (1, 100, 100, 50, 20, 0, '', '', '标准')
             """
+        )
+
+
+def ensure_offer_log_columns(conn):
+    columns = get_table_columns(conn, "offer_logs")
+
+    if "action_count" not in columns:
+        conn.execute(
+            "ALTER TABLE offer_logs ADD COLUMN action_count INTEGER NOT NULL DEFAULT 0"
         )
 
 
@@ -793,13 +815,49 @@ def has_purchased_offer_for_trigger(conn, trigger_reason):
     ).fetchone() is not None
 
 
-def is_offer_closed_for_current_pressure(conn, trigger_reason, player):
+def is_severe_emergency_pressure(conn, player):
+    if player["power"] <= 0:
+        return True
+
+    for resource_name, threshold in SEVERE_RESOURCE_THRESHOLDS.items():
+        if player[resource_name] <= threshold:
+            return True
+
+    rows = conn.execute(
+        """
+        SELECT fatigue, health
+        FROM survivors
+        WHERE owned = 1
+        """
+    ).fetchall()
+
+    exhausted_count = 0
+    for row in rows:
+        if row["health"] <= SEVERE_TEAM_HEALTH_THRESHOLD:
+            return True
+        if row["fatigue"] >= SEVERE_TEAM_FATIGUE_THRESHOLD:
+            exhausted_count += 1
+
+    return len(rows) >= 2 and exhausted_count >= 2
+
+
+def get_offer_suppression_status(conn, trigger_reason, action_count, player):
+    status = {
+        "is_suppressed": False,
+        "suppress_remaining_actions": 0,
+        "suppress_until_action_count": None,
+        "closed_action_count": None,
+        "severe_pressure_override": False
+    }
+
     if not trigger_reason:
-        return False
+        return status
+
+    ensure_offer_log_columns(conn)
 
     closed = conn.execute(
         """
-        SELECT food_before, power_before, materials_before
+        SELECT action_count
         FROM offer_logs
         WHERE offer_id = ?
           AND event_type = 'closed'
@@ -811,13 +869,22 @@ def is_offer_closed_for_current_pressure(conn, trigger_reason, player):
     ).fetchone()
 
     if not closed:
-        return False
+        return status
 
-    return (
-        player["food"] == closed["food_before"]
-        and player["power"] == closed["power_before"]
-        and player["materials"] == closed["materials_before"]
+    suppress_until = (
+        closed["action_count"] + EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW
     )
+    remaining_actions = max(0, suppress_until - action_count)
+    severe_override = is_severe_emergency_pressure(conn, player)
+
+    status.update({
+        "is_suppressed": remaining_actions > 0 and not severe_override,
+        "suppress_remaining_actions": remaining_actions,
+        "suppress_until_action_count": suppress_until,
+        "closed_action_count": closed["action_count"],
+        "severe_pressure_override": severe_override
+    })
+    return status
 
 
 def get_emergency_offer_context(conn):
@@ -832,16 +899,18 @@ def get_emergency_offer_context(conn):
         or get_team_state_pressure_reason(conn)
         or get_low_efficiency_pressure_reason(conn)
     )
+    action_count = get_completed_duty_count(conn)
     purchased = has_purchased_offer_for_trigger(conn, trigger_reason)
-    close_suppressed = is_offer_closed_for_current_pressure(
+    suppression = get_offer_suppression_status(
         conn,
         trigger_reason,
+        action_count,
         player
     )
     active = (
         survivor_count >= 1
         and not purchased
-        and not close_suppressed
+        and not suppression["is_suppressed"]
         and trigger_reason is not None
     )
 
@@ -851,13 +920,20 @@ def get_emergency_offer_context(conn):
         "raw_trigger_reason": trigger_reason,
         "player": player,
         "survivor_count": survivor_count,
+        "action_count": action_count,
         "purchased": purchased,
-        "close_suppressed": close_suppressed
+        "close_suppressed": suppression["is_suppressed"],
+        **suppression
     }
 
 
 def log_offer_event(conn, event_type, context):
+    ensure_offer_log_columns(conn)
     player = context["player"]
+    action_count = context.get("action_count")
+    if action_count is None:
+        action_count = get_completed_duty_count(conn)
+
     conn.execute(
         """
         INSERT INTO offer_logs (
@@ -868,9 +944,10 @@ def log_offer_event(conn, event_type, context):
             power_before,
             materials_before,
             premium_currency_before,
-            survivor_count
+            survivor_count,
+            action_count
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             EMERGENCY_OFFER_ID,
@@ -880,7 +957,8 @@ def log_offer_event(conn, event_type, context):
             player["power"],
             player["materials"],
             player["premium_currency"],
-            context["survivor_count"]
+            context["survivor_count"],
+            action_count
         )
     )
 
@@ -1193,13 +1271,7 @@ def resolve_survivor_state_change(survivor, duty_type):
     }
 
 
-def roll_survivor():
-    rarity = random.choices(
-        ["SSR", "SR", "R"],
-        weights=[5, 20, 75],
-        k=1
-    )[0]
-    picked = random.choice(SURVIVOR_POOL[rarity])
+def build_survivor_result(rarity, picked):
     result = {
         "name": picked["name"],
         "rarity": rarity,
@@ -1212,6 +1284,52 @@ def roll_survivor():
     result.update(build_survivor_state_tags(result["fatigue"], result["health"]))
     result["gacha_intro_line"] = build_gacha_intro_line(result)
     return result
+
+
+def build_named_survivor_result(rarity, survivor_name):
+    candidates = SURVIVOR_POOL.get(rarity, [])
+    picked = None
+
+    for candidate in candidates:
+        if candidate["name"] == survivor_name:
+            picked = candidate
+            break
+
+    if not picked and candidates:
+        picked = candidates[0]
+
+    if not picked:
+        return None
+
+    return build_survivor_result(rarity, picked)
+
+
+def get_local_demo_gacha_result(conn):
+    if not DEMO_MODE_ENABLED or not is_local_dev_request():
+        return None
+
+    draw_count = conn.execute(
+        "SELECT COUNT(*) AS count FROM gacha_logs"
+    ).fetchone()["count"]
+
+    if draw_count >= len(LOCAL_DEMO_GACHA_SEQUENCE):
+        return None
+
+    scripted_draw = LOCAL_DEMO_GACHA_SEQUENCE[draw_count]
+    return build_named_survivor_result(
+        scripted_draw["rarity"],
+        scripted_draw["name"]
+    )
+
+
+def roll_survivor():
+    rarity = random.choices(
+        ["SSR", "SR", "R"],
+        weights=[5, 20, 75],
+        k=1
+    )[0]
+    picked = random.choice(SURVIVOR_POOL[rarity])
+    return build_survivor_result(rarity, picked)
 
 
 def build_state_aware_duty_result(survivor, duty_type, changes, text_builder):
@@ -1341,7 +1459,8 @@ def require_initialized_for_gameplay():
         "/api/status",
         "/api/init/status",
         "/api/init",
-        "/api/dev/reset-init"
+        "/api/dev/reset-init",
+        "/api/dev/demo-mode"
     }
 
     if request.method == "OPTIONS":
@@ -1466,6 +1585,24 @@ def dev_reset_init():
     })
 
 
+@app.route("/api/dev/demo-mode", methods=["GET", "POST"])
+def dev_demo_mode():
+    global DEMO_MODE_ENABLED
+
+    if not is_local_dev_request():
+        return reject_non_local_dev_request()
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        DEMO_MODE_ENABLED = bool(payload.get("enabled"))
+
+    return jsonify({
+        "status": "ok",
+        "enabled": DEMO_MODE_ENABLED,
+        "scripted_sequence": LOCAL_DEMO_GACHA_SEQUENCE
+    })
+
+
 @app.route("/api/resources", methods=["GET"])
 def resources():
     conn = get_db_connection()
@@ -1493,7 +1630,8 @@ def gacha():
             "message": "premium_currency 不足"
         }), 400
 
-    result = roll_survivor()
+    scripted_result = get_local_demo_gacha_result(conn)
+    result = scripted_result or roll_survivor()
     duplicate_survivor_exists = survivor_name_exists(conn, result["name"])
 
     conn.execute(
@@ -1542,6 +1680,7 @@ def gacha():
         if duplicate_survivor_exists else "Gacha success",
         "duplicate": duplicate_survivor_exists,
         "compensation": compensation,
+        "demo_scripted": scripted_result is not None,
         "survivor": result,
         "materials": updated_player["materials"],
         "premium_currency_left": updated_player["premium_currency"]
@@ -1915,24 +2054,36 @@ def gacha_logs():
     rows = conn.execute(
         """
         SELECT id, survivor_name, rarity, role, created_at
-        FROM gacha_logs
-        ORDER BY id DESC
-        LIMIT 20
+        FROM (
+            SELECT id, survivor_name, rarity, role, created_at
+            FROM gacha_logs
+            ORDER BY id DESC
+            LIMIT 20
+        )
+        ORDER BY id ASC
         """
     ).fetchall()
     conn.close()
 
     data = []
+    seen_survivor_names = set()
     for row in rows:
+        duplicate = row["survivor_name"] in seen_survivor_names
+        seen_survivor_names.add(row["survivor_name"])
         data.append({
             "id": row["id"],
             "survivor_name": row["survivor_name"],
             "rarity": row["rarity"],
             "role": row["role"],
+            "duplicate": duplicate,
+            "compensation": {
+                "resource": "materials",
+                "amount": GACHA_DUPLICATE_MATERIAL_COMPENSATION
+            } if duplicate else None,
             "created_at": row["created_at"]
         })
 
-    return jsonify(data)
+    return jsonify(list(reversed(data)))
 
 
 @app.route("/api/emergency-offer/state", methods=["GET"])
@@ -1947,6 +2098,9 @@ def emergency_offer_state():
         "active": context["active"],
         "trigger_reason": context["trigger_reason"],
         "suppressed": context["close_suppressed"],
+        "is_suppressed": context["is_suppressed"],
+        "suppress_remaining_actions": context["suppress_remaining_actions"],
+        "severe_pressure_override": context["severe_pressure_override"],
         "offer": build_emergency_offer(context["raw_trigger_reason"])
     })
 
@@ -1979,7 +2133,8 @@ def emergency_offer_close():
         "status": "ok",
         "message": "Offer close logged",
         "active": context["active"],
-        "trigger_reason": context["trigger_reason"]
+        "trigger_reason": context["trigger_reason"],
+        "suppress_remaining_actions": EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW
     })
 
 
@@ -2030,7 +2185,13 @@ def emergency_offer_purchase():
 
     return jsonify({
         "status": "ok",
-        "message": "战备补给已送达，全员状态略有恢复。",
+        "message": (
+            "战备补给已入库："
+            f"食物 +{rewards['food']} / 电力 +{rewards['power']} / "
+            f"材料 +{rewards['materials']} / 招募券 +{rewards['premium_currency']}；"
+            f"全员疲劳 -{EMERGENCY_OFFER_FATIGUE_RECOVERY}，"
+            f"健康 +{EMERGENCY_OFFER_HEALTH_RECOVERY}。"
+        ),
         "offer": offer,
         "trigger_reason": context["trigger_reason"],
         "recovery_effect": recovery_effect,
@@ -2041,11 +2202,13 @@ def emergency_offer_purchase():
 @app.route("/api/emergency-offer/logs", methods=["GET"])
 def emergency_offer_logs():
     conn = get_db_connection()
+    ensure_offer_log_columns(conn)
     rows = conn.execute(
         """
         SELECT id, offer_id, event_type, trigger_reason,
                food_before, power_before, materials_before,
-               premium_currency_before, survivor_count, created_at
+               premium_currency_before, survivor_count, action_count,
+               created_at
         FROM offer_logs
         ORDER BY id DESC
         LIMIT 20
@@ -2065,6 +2228,7 @@ def emergency_offer_logs():
             "materials_before": row["materials_before"],
             "premium_currency_before": row["premium_currency_before"],
             "survivor_count": row["survivor_count"],
+            "action_count": row["action_count"],
             "created_at": row["created_at"]
         })
 

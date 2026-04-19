@@ -99,6 +99,25 @@
   border-left-color: var(--metal-light);
 }
 
+.log-toggle-button {
+  box-sizing: border-box;
+  min-height: 60rpx;
+  margin: 4rpx 0 18rpx;
+  padding: 0 18rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.28);
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 60rpx;
+}
+
+.log-toggle-button--active {
+  opacity: 0.86;
+  transform: translateY(2rpx);
+}
+
 .log-topline {
   display: flex;
   align-items: center;
@@ -213,6 +232,30 @@
   line-height: 1.35;
 }
 
+.duplicate-log-panel {
+  margin-top: 16rpx;
+  padding: 14rpx 16rpx;
+  border: 1rpx solid rgba(255, 87, 34, 0.34);
+  border-radius: 8rpx;
+  background: rgba(139, 58, 58, 0.16);
+}
+
+.duplicate-log-title {
+  display: block;
+  color: var(--hazard-orange);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.duplicate-log-copy {
+  display: block;
+  margin-top: 6rpx;
+  color: rgba(211, 211, 211, 0.86);
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
 .resource-change-row {
   display: flex;
   flex-wrap: wrap;
@@ -248,4 +291,9 @@
 
 .offer-record-line + .offer-record-line {
   margin-top: 8rpx;
+}
+
+.offer-record-line--result {
+  color: var(--desert-yellow);
+  font-weight: 700;
 }
