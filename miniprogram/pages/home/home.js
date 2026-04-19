@@ -141,6 +141,39 @@ function buildResourceState(resources) {
   }, getResourcePanelState(resources))
 }
 
+function buildEmptyResourceState() {
+  const resources = format.formatResources()
+
+  return Object.assign({
+    resources
+  }, buildResourceState(resources))
+}
+
+function buildClearedOfferState() {
+  return {
+    offerLoading: false,
+    offerPurchasing: false,
+    offerVisible: false,
+    offerExposed: false,
+    offerErrorMessage: "",
+    offerResultMessage: "",
+    offer: null,
+    offerTriggerLabel: "",
+    offerRewardRows: []
+  }
+}
+
+function buildUninitializedHomeState(data) {
+  return Object.assign({
+    initialized: false,
+    initErrorMessage: "",
+    initProfile: buildInitProfile(data || {}),
+    initIntroText: (data && data.intro_text) || INIT_INTRO_TEXT,
+    loading: false,
+    errorMessage: ""
+  }, buildEmptyResourceState(), buildClearedOfferState())
+}
+
 function buildInitProfile(data) {
   return {
     shelter_code: data.shelter_code || "--",
@@ -169,6 +202,16 @@ function isLocalDevApi() {
   const apiBaseUrl = String(config.apiBaseUrl || "").toLowerCase()
 
   return apiBaseUrl.indexOf("127.0.0.1") !== -1 || apiBaseUrl.indexOf("localhost") !== -1
+}
+
+function markResetStateChanged() {
+  const app = getApp()
+
+  if (!app.globalData) {
+    app.globalData = {}
+  }
+
+  app.globalData.resetStateVersion = Number(app.globalData.resetStateVersion || 0) + 1
 }
 
 Page({
@@ -228,14 +271,15 @@ Page({
         if (res.statusCode === 200 && res.data) {
           const initialized = Boolean(res.data.initialized)
 
-          this.setData({
-            initialized,
-            initProfile: buildInitProfile(res.data),
-            initIntroText: res.data.intro_text || INIT_INTRO_TEXT
-          })
-
           if (initialized) {
+            this.setData({
+              initialized,
+              initProfile: buildInitProfile(res.data),
+              initIntroText: res.data.intro_text || INIT_INTRO_TEXT
+            })
             this.refreshHome()
+          } else {
+            this.setData(buildUninitializedHomeState(res.data))
           }
           return
         }
@@ -302,6 +346,7 @@ Page({
       })
       .then((res) => {
         if (res.statusCode === 200 && res.data && res.data.initialized) {
+          markResetStateChanged()
           this.setData({
             initialized: true,
             initProfile: buildInitProfile(res.data)
@@ -627,28 +672,16 @@ Page({
     api.resetInitDebug()
       .then((res) => {
         if (res.statusCode === 200) {
-          const emptyResources = format.formatResources()
-
+          markResetStateChanged()
           this.setData(Object.assign({
-            initialized: false,
-            initErrorMessage: "",
-            initProfile: buildInitProfile({}),
             initForm: {
               shelter_code: "",
               commander_name: "",
               difficulty: "标准"
             },
             difficultyIndex: 1,
-            difficultyNote: DIFFICULTY_NOTES["标准"],
-            resources: emptyResources,
-            offerVisible: false,
-            offer: null,
-            offerTriggerLabel: "",
-            offerRewardRows: [],
-            offerResultMessage: "",
-            offerErrorMessage: "",
-            offerExposed: false
-          }, buildResourceState(emptyResources)))
+            difficultyNote: DIFFICULTY_NOTES["标准"]
+          }, buildUninitializedHomeState({})))
           this.loadInitStatus()
           wx.showToast({
             title: "已回到首次接入",

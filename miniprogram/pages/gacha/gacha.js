@@ -76,14 +76,58 @@ Page({
     survivor: null,
     isPullAnimating: false,
     revealStatusText: "招募舱待命",
-    showResultCard: false
+    showResultCard: false,
+    resetStateVersion: 0
   },
 
   onShow() {
     api.ensureInitialized().then((initialized) => {
+      this.syncResetStateVersion()
+
       if (initialized) {
         this.loadResources()
+        return
       }
+
+      this.resetPageState()
+    })
+  },
+
+  getResetStateVersion() {
+    const app = getApp()
+    const globalData = app.globalData || {}
+    return Number(globalData.resetStateVersion || 0)
+  },
+
+  syncResetStateVersion() {
+    const resetStateVersion = this.getResetStateVersion()
+
+    if (resetStateVersion <= this.data.resetStateVersion) {
+      return
+    }
+
+    this.resetGachaPageState({
+      resetStateVersion
+    })
+  },
+
+  resetGachaPageState(extraState) {
+    this.setData(Object.assign({
+      loadingResources: false,
+      pulling: false,
+      errorMessage: "",
+      resources: format.formatResources(),
+      survivor: null,
+      isPullAnimating: false,
+      revealStatusText: "招募舱待命",
+      showResultCard: false,
+      resetStateVersion: this.data.resetStateVersion
+    }, extraState || {}))
+  },
+
+  resetPageState() {
+    this.resetGachaPageState({
+      resetStateVersion: this.getResetStateVersion()
     })
   },
 

@@ -337,7 +337,27 @@ Page({
       if (initialized) {
         this.loadResources()
         this.loadSurvivors()
+        return
       }
+
+      this.resetPageState()
+    })
+  },
+
+  resetPageState() {
+    this.setData({
+      loadingResources: false,
+      loadingSurvivors: false,
+      assigning: false,
+      errorMessage: "",
+      resources: format.formatResources(),
+      survivors: [],
+      selectedSurvivorId: null,
+      selectedSurvivor: null,
+      dutyResult: null,
+      offerHintVisible: false,
+      offerHintText: "",
+      offerHintTriggerLabel: ""
     })
   },
 

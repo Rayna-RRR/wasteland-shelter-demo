@@ -174,7 +174,39 @@ Page({
     api.ensureInitialized().then((initialized) => {
       if (initialized) {
         this.loadLogs()
+        return
       }
+
+      this.resetPageState()
+    })
+  },
+
+  resetPageState() {
+    this.setData({
+      loadingGachaLogs: false,
+      loadingDutyLogs: false,
+      loadingOfferLogs: false,
+      gachaErrorMessage: "",
+      dutyErrorMessage: "",
+      offerErrorMessage: "",
+      gachaExpanded: false,
+      dutyExpanded: false,
+      offerExpanded: false,
+      gachaLogs: [],
+      dutyLogs: [],
+      offerLogs: [],
+      gachaVisibleLogs: [],
+      dutyVisibleLogs: [],
+      offerVisibleLogs: [],
+      gachaHiddenCount: 0,
+      dutyHiddenCount: 0,
+      offerHiddenCount: 0,
+      gachaHasHiddenLogs: false,
+      dutyHasHiddenLogs: false,
+      offerHasHiddenLogs: false,
+      gachaToggleText: "",
+      dutyToggleText: "",
+      offerToggleText: ""
     })
   },
 
