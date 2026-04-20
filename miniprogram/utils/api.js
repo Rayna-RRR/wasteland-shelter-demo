@@ -16,6 +16,10 @@ function getResources() {
   return request("/api/resources", "GET")
 }
 
+function resolveEvent(data) {
+  return request("/api/event/resolve", "POST", data)
+}
+
 function getInitStatus() {
   return request("/api/init/status", "GET")
 }
@@ -120,6 +124,7 @@ module.exports = {
   initializeShelter,
   ensureInitialized,
   getResources,
+  resolveEvent,
   pullGacha,
   getSurvivors,
   assignDuty,

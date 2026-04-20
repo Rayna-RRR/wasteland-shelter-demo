@@ -1,6 +1,8 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
 
+const ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
+
 const RESOURCE_DELTA_META = [
   { key: "food_change", label: "食物" },
   { key: "power_change", label: "电力" },
@@ -22,6 +24,18 @@ function getStateTag(fatigue, health) {
   }
 
   return "状态良好"
+}
+
+function getStatusTagClass(status, fallbackClass) {
+  if (status === "left") {
+    return "state-tag state-tag--danger"
+  }
+
+  if (status === "injured") {
+    return "state-tag state-tag--warning"
+  }
+
+  return fallbackClass
 }
 
 function getStateTagClass(fatigue, health) {
@@ -196,6 +210,13 @@ function formatSurvivor(row) {
   const state = formatState(row.fatigue, row.health)
   const rarityKey = getRarityKey(row.rarity)
   const profile = normalizeSurvivorProfile(row, state.stateTag)
+  const status = row.status || "active"
+  const unavailable = row.assignable === false || status === "injured" || status === "left"
+  const statusLabel = row.status_label || (unavailable ? "不可值勤" : "可值勤")
+  const statusNote = row.unavailable_reason || row.leave_reason || ""
+  const displayStateTag = unavailable ? statusLabel : (profile.currentStateTag || state.stateTag)
+  const stateTagClass = getStatusTagClass(status, state.stateTagClass)
+  const cardBaseClass = `survivor-card survivor-card--${rarityKey}${unavailable ? " survivor-card--unavailable" : ""}`
 
   return {
     id: row.id,
@@ -203,21 +224,27 @@ function formatSurvivor(row) {
     rarity: getRarityLabel(row.rarity),
     rarityKey,
     rarityBadgeClass: `rarity-badge rarity-badge--${rarityKey}`,
-    selectedPanelClass: `selected-duty-card selected-duty-card--${rarityKey}`,
+    selectedPanelClass: `selected-duty-card selected-duty-card--${rarityKey}${unavailable ? " selected-duty-card--unavailable" : ""}`,
     role: row.role,
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
     archiveLine: profile.archiveLine,
     currentStateTag: profile.currentStateTag,
     injuredTag: row.injured_tag || "",
+    status,
+    statusLabel,
+    statusNote,
+    availableOnDay: row.available_on_day || 1,
+    leaveReason: row.leave_reason || "",
+    unavailable,
     fatigue: state.fatigue,
     health: state.health,
     fatigueClass: state.fatigueClass,
     healthClass: state.healthClass,
-    stateTag: profile.currentStateTag || state.stateTag,
-    stateTagClass: state.stateTagClass,
-    cardBaseClass: `survivor-card survivor-card--${rarityKey}`,
-    cardClass: `survivor-card survivor-card--${rarityKey}`
+    stateTag: displayStateTag,
+    stateTagClass,
+    cardBaseClass,
+    cardClass: cardBaseClass
   }
 }
 
@@ -230,7 +257,8 @@ function applySurvivorSelection(survivors, selectedSurvivorId) {
     }
   }
 
-  const fallbackId = survivors[0].id
+  const firstAssignable = survivors.find((survivor) => !survivor.unavailable)
+  const fallbackId = (firstAssignable || survivors[0]).id
   const selectedId = Number(selectedSurvivorId || fallbackId)
   let selectedSurvivor = null
 
@@ -315,6 +343,87 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor) {
   }
 }
 
+function normalizeRunState(data) {
+  const runState = data && data.run_state
+
+  if (!runState) {
+    return {
+      current_day: "--",
+      total_days: "--",
+      actions_left: "--",
+      actions_per_day: "--",
+      threat_days_left: "--",
+      game_status: "inactive",
+      pending_event_id: "",
+      pending_event: null
+    }
+  }
+
+  return {
+    current_day: runState.current_day,
+    total_days: runState.total_days,
+    actions_left: runState.actions_left,
+    actions_per_day: runState.actions_per_day,
+    threat_days_left: runState.threat_days_left,
+    game_status: runState.game_status || "active",
+    pending_event_id: runState.pending_event_id || "",
+    pending_event: runState.pending_event || null
+  }
+}
+
+function getRunBlockedMessage(runState) {
+  if (runState.pending_event_id || runState.pending_event) {
+    return "今日随机事件未处理，请先回首页处理。"
+  }
+
+  if (runState.game_status === "won") {
+    return "避难所已撑过最终日，本轮已胜利。"
+  }
+
+  if (runState.game_status === "lost") {
+    return "避难所已经失守，本轮已结束。"
+  }
+
+  return ACTION_EXHAUSTED_MESSAGE
+}
+
+function getDayTransitionMessage(dayTransition) {
+  if (!dayTransition) {
+    return ""
+  }
+
+  if (dayTransition.result === "won") {
+    return "日终结算完成，本轮胜利。"
+  }
+
+  if (dayTransition.result === "lost") {
+    return "日终结算完成，本轮失败。"
+  }
+
+  if (dayTransition.result === "advanced") {
+    return `日终结算完成，进入第 ${dayTransition.next_day} 天。`
+  }
+
+  return "日终结算完成。"
+}
+
+function buildRunState(data) {
+  const runState = normalizeRunState(data)
+  const hasRunState = Boolean(data && data.run_state)
+  const runActive = runState.game_status === "active"
+  const noActionsLeft = hasRunState && runActive && Number(runState.actions_left) <= 0
+  const hasPendingEvent = hasRunState && Boolean(runState.pending_event_id || runState.pending_event)
+
+  return {
+    hasRunState,
+    runState,
+    hasPendingEvent,
+    noActionsLeft,
+    actionBlocked: hasRunState && (!runActive || noActionsLeft || hasPendingEvent),
+    actionBlockMessage: getRunBlockedMessage(runState)
+  }
+}
+
 Page({
   data: {
     loadingResources: false,
@@ -322,6 +431,12 @@ Page({
     assigning: false,
     errorMessage: "",
     resources: format.formatResources(),
+    hasRunState: false,
+    runState: normalizeRunState(),
+    hasPendingEvent: false,
+    noActionsLeft: false,
+    actionBlocked: false,
+    actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
     survivors: [],
     selectedSurvivorId: null,
     selectedSurvivor: null,
@@ -329,11 +444,14 @@ Page({
     dutyResult: null,
     offerHintVisible: false,
     offerHintText: "",
-    offerHintTriggerLabel: ""
+    offerHintTriggerLabel: "",
+    resetStateVersion: 0
   },
 
   onShow() {
     api.ensureInitialized().then((initialized) => {
+      this.syncResetStateVersion()
+
       if (initialized) {
         this.loadResources()
         this.loadSurvivors()
@@ -351,14 +469,37 @@ Page({
       assigning: false,
       errorMessage: "",
       resources: format.formatResources(),
+      hasRunState: false,
+      runState: normalizeRunState(),
+      hasPendingEvent: false,
+      noActionsLeft: false,
+      actionBlocked: false,
+      actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
       survivors: [],
       selectedSurvivorId: null,
       selectedSurvivor: null,
       dutyResult: null,
       offerHintVisible: false,
       offerHintText: "",
-      offerHintTriggerLabel: ""
+      offerHintTriggerLabel: "",
+      resetStateVersion: this.getResetStateVersion()
     })
+  },
+
+  getResetStateVersion() {
+    const app = getApp()
+    const globalData = app.globalData || {}
+    return Number(globalData.resetStateVersion || 0)
+  },
+
+  syncResetStateVersion() {
+    const resetStateVersion = this.getResetStateVersion()
+
+    if (resetStateVersion <= this.data.resetStateVersion) {
+      return
+    }
+
+    this.resetPageState()
   },
 
   loadResources() {
@@ -369,9 +510,9 @@ Page({
     api.getResources()
       .then((res) => {
         if (res.statusCode === 200 && res.data) {
-          this.setData({
+          this.setData(Object.assign({
             resources: format.formatResources(res.data)
-          })
+          }, buildRunState(res.data)))
           return
         }
 
@@ -437,6 +578,11 @@ Page({
       return
     }
 
+    if (this.data.actionBlocked) {
+      this.showActionBlocked()
+      return
+    }
+
     const survivorId = event.currentTarget.dataset.survivorId || this.data.selectedSurvivorId
     const dutyType = event.currentTarget.dataset.dutyType
 
@@ -449,6 +595,11 @@ Page({
         title: message,
         icon: "none"
       })
+      return
+    }
+
+    if (this.data.selectedSurvivor && this.data.selectedSurvivor.unavailable) {
+      this.showUnavailableSurvivorMessage()
       return
     }
 
@@ -470,19 +621,25 @@ Page({
           const survivor = res.data.survivor || {}
           const previousSurvivor = this.data.selectedSurvivor
 
-          this.setData({
+          this.setData(Object.assign({
             dutyResult: buildResultPanel(
               result,
               survivor,
               format.getDutyLabel(dutyType),
               previousSurvivor
             )
-          })
+          }, buildRunState(res.data)))
 
           wx.showToast({
             title: "值勤完成",
             icon: "success"
           })
+          if (res.data.day_transition) {
+            wx.showToast({
+              title: getDayTransitionMessage(res.data.day_transition),
+              icon: "none"
+            })
+          }
           this.loadResources()
           this.loadSurvivors()
           this.checkEmergencyOfferAfterDuty()
@@ -490,9 +647,9 @@ Page({
         }
 
         const message = getDutyErrorMessage(res)
-        this.setData({
+        this.setData(Object.assign({
           errorMessage: message
-        })
+        }, buildRunState(res && res.data)))
         wx.showToast({
           title: message,
           icon: "none"
@@ -564,6 +721,11 @@ Page({
       return
     }
 
+    if (this.data.actionBlocked) {
+      this.showActionBlocked()
+      return
+    }
+
     const survivorId = event.currentTarget.dataset.survivorId || this.data.selectedSurvivorId
 
     if (!survivorId) {
@@ -575,6 +737,11 @@ Page({
         title: message,
         icon: "none"
       })
+      return
+    }
+
+    if (this.data.selectedSurvivor && this.data.selectedSurvivor.unavailable) {
+      this.showUnavailableSurvivorMessage()
       return
     }
 
@@ -595,27 +762,34 @@ Page({
           const survivor = res.data.survivor || {}
           const previousSurvivor = this.data.selectedSurvivor
 
-          this.setData({
+          this.setData(Object.assign({
             dutyResult: buildResultPanel(
               result,
               survivor,
               "休整",
               previousSurvivor
             )
-          })
+          }, buildRunState(res.data)))
 
           wx.showToast({
             title: "休整完成",
             icon: "success"
           })
+          if (res.data.day_transition) {
+            wx.showToast({
+              title: getDayTransitionMessage(res.data.day_transition),
+              icon: "none"
+            })
+          }
+          this.loadResources()
           this.loadSurvivors()
           return
         }
 
         const message = getRestErrorMessage(res)
-        this.setData({
+        this.setData(Object.assign({
           errorMessage: message
-        })
+        }, buildRunState(res && res.data)))
         wx.showToast({
           title: message,
           icon: "none"
@@ -636,5 +810,28 @@ Page({
           assigning: false
         })
       })
+  },
+
+  showActionBlocked() {
+    this.setData({
+      errorMessage: this.data.actionBlockMessage
+    })
+    wx.showToast({
+      title: this.data.actionBlockMessage,
+      icon: "none"
+    })
+  },
+
+  showUnavailableSurvivorMessage() {
+    const survivor = this.data.selectedSurvivor || {}
+    const message = survivor.statusNote || "该幸存者当前不可值勤。"
+
+    this.setData({
+      errorMessage: message
+    })
+    wx.showToast({
+      title: message,
+      icon: "none"
+    })
   }
 })

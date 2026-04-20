@@ -25,6 +25,24 @@ def ensure_survivor_state_columns(cursor):
         ADD COLUMN health INTEGER NOT NULL DEFAULT 100
         """)
 
+    if "status" not in columns:
+        cursor.execute("""
+        ALTER TABLE survivors
+        ADD COLUMN status TEXT NOT NULL DEFAULT 'active'
+        """)
+
+    if "available_on_day" not in columns:
+        cursor.execute("""
+        ALTER TABLE survivors
+        ADD COLUMN available_on_day INTEGER NOT NULL DEFAULT 1
+        """)
+
+    if "leave_reason" not in columns:
+        cursor.execute("""
+        ALTER TABLE survivors
+        ADD COLUMN leave_reason TEXT NOT NULL DEFAULT ''
+        """)
+
     cursor.execute("""
     UPDATE survivors
     SET fatigue = 0
@@ -47,6 +65,25 @@ def ensure_survivor_state_columns(cursor):
     UPDATE survivors
     SET health = 0
     WHERE health < 0
+    """)
+
+    cursor.execute("""
+    UPDATE survivors
+    SET status = 'active'
+    WHERE status IS NULL
+       OR status NOT IN ('active', 'injured', 'left')
+    """)
+
+    cursor.execute("""
+    UPDATE survivors
+    SET available_on_day = 1
+    WHERE available_on_day IS NULL OR available_on_day < 1
+    """)
+
+    cursor.execute("""
+    UPDATE survivors
+    SET leave_reason = ''
+    WHERE leave_reason IS NULL
     """)
 
 
@@ -88,6 +125,148 @@ def ensure_offer_log_columns(cursor):
         """)
 
 
+def ensure_player_meta(cursor):
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS player_meta (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        total_runs INTEGER NOT NULL DEFAULT 0,
+        best_survived_day INTEGER NOT NULL DEFAULT 0,
+        unlock_json TEXT NOT NULL DEFAULT '{}'
+    )
+    """)
+
+    columns = get_table_columns(cursor, "player_meta")
+
+    if "total_runs" not in columns:
+        cursor.execute("""
+        ALTER TABLE player_meta
+        ADD COLUMN total_runs INTEGER NOT NULL DEFAULT 0
+        """)
+
+    if "best_survived_day" not in columns:
+        cursor.execute("""
+        ALTER TABLE player_meta
+        ADD COLUMN best_survived_day INTEGER NOT NULL DEFAULT 0
+        """)
+
+    if "unlock_json" not in columns:
+        cursor.execute("""
+        ALTER TABLE player_meta
+        ADD COLUMN unlock_json TEXT NOT NULL DEFAULT '{}'
+        """)
+
+    cursor.execute("""
+    INSERT OR IGNORE INTO player_meta (
+        id,
+        total_runs,
+        best_survived_day,
+        unlock_json
+    )
+    VALUES (1, 0, 0, '{}')
+    """)
+
+
+def ensure_run_state(cursor):
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS run_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        run_uid TEXT NOT NULL,
+        difficulty_snapshot TEXT NOT NULL,
+        total_days INTEGER NOT NULL,
+        current_day INTEGER NOT NULL DEFAULT 1,
+        actions_per_day INTEGER NOT NULL DEFAULT 3,
+        actions_left INTEGER NOT NULL DEFAULT 3,
+        threat_days_left INTEGER NOT NULL,
+        game_status TEXT NOT NULL DEFAULT 'active',
+        pending_event_id TEXT,
+        pending_event_payload TEXT NOT NULL DEFAULT '',
+        offer_suppressed_until_day INTEGER NOT NULL DEFAULT 0,
+        result TEXT,
+        last_settlement_summary TEXT NOT NULL DEFAULT ''
+    )
+    """)
+
+    columns = get_table_columns(cursor, "run_state")
+
+    if "run_uid" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN run_uid TEXT NOT NULL DEFAULT ''
+        """)
+
+    if "difficulty_snapshot" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN difficulty_snapshot TEXT NOT NULL DEFAULT '标准'
+        """)
+
+    if "total_days" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN total_days INTEGER NOT NULL DEFAULT 8
+        """)
+
+    if "current_day" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN current_day INTEGER NOT NULL DEFAULT 1
+        """)
+
+    if "actions_per_day" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN actions_per_day INTEGER NOT NULL DEFAULT 3
+        """)
+
+    if "actions_left" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN actions_left INTEGER NOT NULL DEFAULT 3
+        """)
+
+    if "threat_days_left" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN threat_days_left INTEGER NOT NULL DEFAULT 8
+        """)
+
+    if "game_status" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN game_status TEXT NOT NULL DEFAULT 'active'
+        """)
+
+    if "pending_event_id" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN pending_event_id TEXT
+        """)
+
+    if "pending_event_payload" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN pending_event_payload TEXT NOT NULL DEFAULT ''
+        """)
+
+    if "offer_suppressed_until_day" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN offer_suppressed_until_day INTEGER NOT NULL DEFAULT 0
+        """)
+
+    if "result" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN result TEXT
+        """)
+
+    if "last_settlement_summary" not in columns:
+        cursor.execute("""
+        ALTER TABLE run_state
+        ADD COLUMN last_settlement_summary TEXT NOT NULL DEFAULT ''
+        """)
+
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -117,6 +296,9 @@ def init_db():
         mood TEXT NOT NULL DEFAULT 'normal',
         fatigue INTEGER NOT NULL DEFAULT 0,
         health INTEGER NOT NULL DEFAULT 100,
+        status TEXT NOT NULL DEFAULT 'active',
+        available_on_day INTEGER NOT NULL DEFAULT 1,
+        leave_reason TEXT NOT NULL DEFAULT '',
         owned INTEGER NOT NULL DEFAULT 1
     )
     """)
@@ -163,6 +345,8 @@ def init_db():
     """)
 
     ensure_offer_log_columns(cursor)
+    ensure_player_meta(cursor)
+    ensure_run_state(cursor)
 
     cursor.execute("SELECT * FROM player WHERE id = 1")
     player = cursor.fetchone()

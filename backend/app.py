@@ -3,6 +3,8 @@ from flask_cors import CORS
 import sqlite3
 import os
 import random
+import uuid
+import json
 
 app = Flask(__name__)
 app.json.ensure_ascii = False
@@ -10,6 +12,7 @@ CORS(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "game.db")
+EVENT_DEFINITIONS_PATH = os.path.join(BASE_DIR, "data", "event_definitions.json")
 
 SURVIVOR_POOL = {
     "SSR": [
@@ -144,14 +147,13 @@ DUTY_OPERATING_COSTS = {
         "materials": 1
     }
 }
-SHELTER_UPKEEP_DUTY_INTERVAL = 3
 SHELTER_UPKEEP_COSTS = {
-    "food": 6,
-    "power": 6,
-    "materials": 5
+    "food": 10,
+    "power": 10,
+    "materials": 7
 }
-SHELTER_UPKEEP_FATIGUE_PENALTY = 6
-SHELTER_UPKEEP_HEALTH_PENALTY = 2
+SHELTER_UPKEEP_FATIGUE_PENALTY = 8
+SHELTER_UPKEEP_HEALTH_PENALTY = 3
 PLAYER_RESOURCE_KEYS = ("food", "power", "materials")
 SHELTER_CODE_MAX_LENGTH = 16
 COMMANDER_NAME_MAX_LENGTH = 12
@@ -168,24 +170,50 @@ INIT_INTRO_TEXT = (
 )
 DIFFICULTY_STARTING_RESOURCES = {
     "稳健": {
-        "food": 120,
-        "power": 110,
-        "materials": 90,
-        "premium_currency": 60
+        "food": 100,
+        "power": 95,
+        "materials": 70,
+        "premium_currency": 45
     },
     "标准": {
-        "food": 100,
-        "power": 100,
-        "materials": 70,
-        "premium_currency": 40
+        "food": 80,
+        "power": 80,
+        "materials": 55,
+        "premium_currency": 30
     },
     "极端": {
-        "food": 70,
-        "power": 75,
-        "materials": 45,
-        "premium_currency": 20
+        "food": 55,
+        "power": 60,
+        "materials": 32,
+        "premium_currency": 15
     }
 }
+DIFFICULTY_TOTAL_DAYS = {
+    "稳健": 10,
+    "标准": 8,
+    "极端": 7
+}
+DEFAULT_ACTIONS_PER_DAY = 3
+CURRENT_RUN_ID = 1
+PLAYER_META_ID = 1
+ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
+PENDING_EVENT_ACTION_BLOCK_MESSAGE = "今日随机事件尚未处理，请先回到首页完成选择。"
+RUN_ENDED_MESSAGES = {
+    "won": "避难所已撑过最终日，本轮已胜利。",
+    "lost": "避难所已经失守，本轮已结束。"
+}
+RUN_INACTIVE_MESSAGE = "当前轮次已经结束，请回到首页查看结果。"
+SURVIVOR_STATUS_ACTIVE = "active"
+SURVIVOR_STATUS_INJURED = "injured"
+SURVIVOR_STATUS_LEFT = "left"
+SURVIVOR_STATUSES = {
+    SURVIVOR_STATUS_ACTIVE,
+    SURVIVOR_STATUS_INJURED,
+    SURVIVOR_STATUS_LEFT
+}
+EVENT_PAYLOAD_STATUS_PENDING = "pending"
+EVENT_PAYLOAD_STATUS_RESOLVED = "resolved"
+HIGH_RISK_INJURY_RECOVERY_DAYS = 2
 POWER_SHORTAGE_FATIGUE_PENALTY = 4
 FATIGUE_INCREASE_BY_DUTY = {
     "scavenge": 18,
@@ -194,8 +222,8 @@ FATIGUE_INCREASE_BY_DUTY = {
     "guard": 12
 }
 HIGH_RISK_DUTIES = ["scavenge", "guard"]
-EMERGENCY_OFFER_FATIGUE_RECOVERY = 15
-EMERGENCY_OFFER_HEALTH_RECOVERY = 5
+EMERGENCY_OFFER_FATIGUE_RECOVERY = 10
+EMERGENCY_OFFER_HEALTH_RECOVERY = 3
 RESOURCE_CRITICAL_THRESHOLDS = {
     "food": 60,
     "power": 60,
@@ -213,6 +241,7 @@ RECENT_DUTY_LOG_LIMIT = 3
 LOW_EFFICIENCY_TRIGGER_COUNT = 2
 LOW_EFFICIENCY_TOTAL_CHANGE_THRESHOLD = 2
 EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW = 3
+EMERGENCY_OFFER_SUPPRESS_DAYS_AFTER_CLOSE = 1
 SEVERE_RESOURCE_THRESHOLDS = {
     "food": 35,
     "power": 35,
@@ -229,10 +258,10 @@ EMERGENCY_OFFER = {
     "urgency_label": "短时开放",
     "price_label": "¥6",
     "rewards": {
-        "premium_currency": 3,
-        "food": 40,
-        "power": 40,
-        "materials": 25
+        "premium_currency": 2,
+        "food": 25,
+        "power": 25,
+        "materials": 15
     }
 }
 EMERGENCY_OFFER_COPY_BY_TRIGGER = {
@@ -333,6 +362,51 @@ def ensure_player_init_columns(conn):
         )
 
 
+def ensure_survivor_state_columns(conn):
+    columns = get_table_columns(conn, "survivors")
+
+    if "status" not in columns:
+        conn.execute(
+            "ALTER TABLE survivors ADD COLUMN status TEXT NOT NULL DEFAULT 'active'"
+        )
+
+    if "available_on_day" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE survivors
+            ADD COLUMN available_on_day INTEGER NOT NULL DEFAULT 1
+            """
+        )
+
+    if "leave_reason" not in columns:
+        conn.execute(
+            "ALTER TABLE survivors ADD COLUMN leave_reason TEXT NOT NULL DEFAULT ''"
+        )
+
+    conn.execute(
+        """
+        UPDATE survivors
+        SET status = 'active'
+        WHERE status IS NULL
+           OR status NOT IN ('active', 'injured', 'left')
+        """
+    )
+    conn.execute(
+        """
+        UPDATE survivors
+        SET available_on_day = 1
+        WHERE available_on_day IS NULL OR available_on_day < 1
+        """
+    )
+    conn.execute(
+        """
+        UPDATE survivors
+        SET leave_reason = ''
+        WHERE leave_reason IS NULL
+        """
+    )
+
+
 def ensure_offer_log_columns(conn):
     columns = get_table_columns(conn, "offer_logs")
 
@@ -340,6 +414,685 @@ def ensure_offer_log_columns(conn):
         conn.execute(
             "ALTER TABLE offer_logs ADD COLUMN action_count INTEGER NOT NULL DEFAULT 0"
         )
+
+
+def ensure_player_meta_table(conn):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS player_meta (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            total_runs INTEGER NOT NULL DEFAULT 0,
+            best_survived_day INTEGER NOT NULL DEFAULT 0,
+            unlock_json TEXT NOT NULL DEFAULT '{}'
+        )
+        """
+    )
+    columns = get_table_columns(conn, "player_meta")
+
+    if "total_runs" not in columns:
+        conn.execute(
+            "ALTER TABLE player_meta ADD COLUMN total_runs INTEGER NOT NULL DEFAULT 0"
+        )
+
+    if "best_survived_day" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE player_meta
+            ADD COLUMN best_survived_day INTEGER NOT NULL DEFAULT 0
+            """
+        )
+
+    if "unlock_json" not in columns:
+        conn.execute(
+            "ALTER TABLE player_meta ADD COLUMN unlock_json TEXT NOT NULL DEFAULT '{}'"
+        )
+
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO player_meta (
+            id,
+            total_runs,
+            best_survived_day,
+            unlock_json
+        )
+        VALUES (?, 0, 0, '{}')
+        """,
+        (PLAYER_META_ID,)
+    )
+
+
+def ensure_run_state_table(conn):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS run_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            run_uid TEXT NOT NULL,
+            difficulty_snapshot TEXT NOT NULL,
+            total_days INTEGER NOT NULL,
+            current_day INTEGER NOT NULL DEFAULT 1,
+            actions_per_day INTEGER NOT NULL DEFAULT 3,
+            actions_left INTEGER NOT NULL DEFAULT 3,
+            threat_days_left INTEGER NOT NULL,
+            game_status TEXT NOT NULL DEFAULT 'active',
+            pending_event_id TEXT,
+            pending_event_payload TEXT NOT NULL DEFAULT '',
+            offer_suppressed_until_day INTEGER NOT NULL DEFAULT 0,
+            result TEXT,
+            last_settlement_summary TEXT NOT NULL DEFAULT ''
+        )
+        """
+    )
+    columns = get_table_columns(conn, "run_state")
+
+    if "run_uid" not in columns:
+        conn.execute(
+            "ALTER TABLE run_state ADD COLUMN run_uid TEXT NOT NULL DEFAULT ''"
+        )
+
+    if "difficulty_snapshot" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN difficulty_snapshot TEXT NOT NULL DEFAULT '标准'
+            """
+        )
+
+    if "total_days" not in columns:
+        conn.execute(
+            "ALTER TABLE run_state ADD COLUMN total_days INTEGER NOT NULL DEFAULT 8"
+        )
+
+    if "current_day" not in columns:
+        conn.execute(
+            "ALTER TABLE run_state ADD COLUMN current_day INTEGER NOT NULL DEFAULT 1"
+        )
+
+    if "actions_per_day" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN actions_per_day INTEGER NOT NULL DEFAULT 3
+            """
+        )
+
+    if "actions_left" not in columns:
+        conn.execute(
+            "ALTER TABLE run_state ADD COLUMN actions_left INTEGER NOT NULL DEFAULT 3"
+        )
+
+    if "threat_days_left" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN threat_days_left INTEGER NOT NULL DEFAULT 8
+            """
+        )
+
+    if "game_status" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN game_status TEXT NOT NULL DEFAULT 'active'
+            """
+        )
+
+    if "pending_event_id" not in columns:
+        conn.execute("ALTER TABLE run_state ADD COLUMN pending_event_id TEXT")
+
+    if "pending_event_payload" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN pending_event_payload TEXT NOT NULL DEFAULT ''
+            """
+        )
+
+    if "offer_suppressed_until_day" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN offer_suppressed_until_day INTEGER NOT NULL DEFAULT 0
+            """
+        )
+
+    if "result" not in columns:
+        conn.execute("ALTER TABLE run_state ADD COLUMN result TEXT")
+
+    if "last_settlement_summary" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE run_state
+            ADD COLUMN last_settlement_summary TEXT NOT NULL DEFAULT ''
+            """
+        )
+
+
+def get_total_days_for_difficulty(difficulty):
+    return DIFFICULTY_TOTAL_DAYS.get(difficulty, DIFFICULTY_TOTAL_DAYS["标准"])
+
+
+def read_current_run(conn):
+    ensure_run_state_table(conn)
+    return conn.execute(
+        """
+        SELECT id, run_uid, difficulty_snapshot, total_days, current_day,
+               actions_per_day, actions_left, threat_days_left, game_status,
+               pending_event_id, pending_event_payload,
+               offer_suppressed_until_day, result,
+               last_settlement_summary
+        FROM run_state
+        WHERE id = ?
+        """,
+        (CURRENT_RUN_ID,)
+    ).fetchone()
+
+
+def serialize_run_state(row):
+    if not row:
+        return None
+
+    return {
+        "id": row["id"],
+        "run_uid": row["run_uid"],
+        "difficulty_snapshot": row["difficulty_snapshot"],
+        "total_days": row["total_days"],
+        "current_day": row["current_day"],
+        "actions_per_day": row["actions_per_day"],
+        "actions_left": row["actions_left"],
+        "threat_days_left": row["threat_days_left"],
+        "game_status": row["game_status"],
+        "pending_event_id": row["pending_event_id"],
+        "pending_event": build_pending_event_view(
+            row["pending_event_id"],
+            row["pending_event_payload"]
+        ),
+        "offer_suppressed_until_day": row["offer_suppressed_until_day"],
+        "result": row["result"],
+        "last_settlement_summary": row["last_settlement_summary"]
+    }
+
+
+def create_current_run(conn, difficulty, count_as_new_run=False):
+    ensure_player_meta_table(conn)
+    ensure_run_state_table(conn)
+
+    total_days = get_total_days_for_difficulty(difficulty)
+    conn.execute("DELETE FROM run_state")
+    conn.execute(
+        """
+        INSERT INTO run_state (
+            id,
+            run_uid,
+            difficulty_snapshot,
+            total_days,
+            current_day,
+            actions_per_day,
+            actions_left,
+            threat_days_left,
+            game_status,
+            pending_event_id,
+            pending_event_payload,
+            offer_suppressed_until_day,
+            result,
+            last_settlement_summary
+        )
+        VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'active', NULL, '', 0, NULL, '')
+        """,
+        (
+            CURRENT_RUN_ID,
+            uuid.uuid4().hex,
+            difficulty,
+            total_days,
+            DEFAULT_ACTIONS_PER_DAY,
+            DEFAULT_ACTIONS_PER_DAY,
+            total_days
+        )
+    )
+
+    if count_as_new_run:
+        conn.execute(
+            """
+            UPDATE player_meta
+            SET total_runs = total_runs + 1
+            WHERE id = ?
+            """,
+            (PLAYER_META_ID,)
+        )
+
+    return read_current_run(conn)
+
+
+def ensure_current_run_exists(conn):
+    run_state = read_current_run(conn)
+    if run_state:
+        return run_state
+
+    player = get_player_init_profile(conn)
+    if not player["initialized"]:
+        return None
+
+    return create_current_run(
+        conn,
+        player["difficulty"],
+        count_as_new_run=False
+    )
+
+
+def dumps_compact_json(data):
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def parse_compact_json_object(value):
+    if not value or not isinstance(value, str):
+        return {}
+
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def load_event_definitions():
+    try:
+        with open(EVENT_DEFINITIONS_PATH, "r", encoding="utf-8") as file_obj:
+            data = json.load(file_obj)
+    except (OSError, ValueError):
+        return []
+
+    events = data.get("events") if isinstance(data, dict) else data
+    if not isinstance(events, list):
+        return []
+
+    return [
+        event for event in events
+        if isinstance(event, dict) and event.get("id")
+    ]
+
+
+def get_event_definition(event_id):
+    for event in load_event_definitions():
+        if event.get("id") == event_id:
+            return event
+    return None
+
+
+def get_event_target_name(payload):
+    target = payload.get("target_survivor") or {}
+    return target.get("name") or "一名幸存者"
+
+
+def format_event_text(text, payload):
+    if not isinstance(text, str):
+        return ""
+
+    target_name = get_event_target_name(payload)
+    return text.replace("{target}", target_name)
+
+
+def build_pending_event_view(event_id, payload_text):
+    if not event_id:
+        return None
+
+    payload = parse_compact_json_object(payload_text)
+    event_def = get_event_definition(event_id)
+    if not event_def:
+        return {
+            "id": event_id,
+            "day": payload.get("day"),
+            "title": "未知事件",
+            "description": "事件配置暂时无法读取，请刷新后重试。",
+            "target_survivor": payload.get("target_survivor"),
+            "choices": []
+        }
+
+    choices = []
+    for choice in event_def.get("choices", []):
+        if not isinstance(choice, dict):
+            continue
+        choices.append({
+            "id": choice.get("id"),
+            "label": format_event_text(choice.get("label", ""), payload),
+            "description": format_event_text(
+                choice.get("description", ""),
+                payload
+            )
+        })
+
+    return {
+        "id": event_def["id"],
+        "day": payload.get("day"),
+        "title": format_event_text(event_def.get("title", ""), payload),
+        "description": format_event_text(
+            event_def.get("description", ""),
+            payload
+        ),
+        "target_survivor": payload.get("target_survivor"),
+        "choices": choices
+    }
+
+
+def restore_recovered_survivors(conn, current_day):
+    ensure_survivor_state_columns(conn)
+    rows = conn.execute(
+        """
+        SELECT id
+        FROM survivors
+        WHERE owned = 1
+          AND status = 'injured'
+          AND available_on_day <= ?
+        """,
+        (current_day,)
+    ).fetchall()
+
+    for row in rows:
+        conn.execute(
+            """
+            UPDATE survivors
+            SET status = 'active',
+                leave_reason = ''
+            WHERE id = ?
+              AND owned = 1
+              AND status = 'injured'
+              AND available_on_day <= ?
+            """,
+            (row["id"], current_day)
+        )
+
+    return [row["id"] for row in rows]
+
+
+def set_offer_suppression_window(conn, current_day):
+    ensure_run_state_table(conn)
+    suppressed_until_day = current_day + EMERGENCY_OFFER_SUPPRESS_DAYS_AFTER_CLOSE
+    conn.execute(
+        """
+        UPDATE run_state
+        SET offer_suppressed_until_day = ?
+        WHERE id = ?
+        """,
+        (suppressed_until_day, CURRENT_RUN_ID)
+    )
+    return suppressed_until_day
+
+
+def get_active_survivor_rows(conn):
+    ensure_survivor_state_columns(conn)
+    return conn.execute(
+        """
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
+        FROM survivors
+        WHERE owned = 1
+          AND status = 'active'
+        ORDER BY id ASC
+        """
+    ).fetchall()
+
+
+def survivor_is_poor_condition(survivor):
+    return survivor["health"] <= 45 or survivor["fatigue"] >= 80
+
+
+def pick_event_target(conn, event_def, current_day):
+    if not event_def.get("requires_survivor"):
+        return None
+
+    rows = get_active_survivor_rows(conn)
+    if event_def.get("requires_poor_condition"):
+        rows = [row for row in rows if survivor_is_poor_condition(row)]
+
+    if not rows:
+        return None
+
+    selector = event_def.get("target_selector")
+    if selector == "lowest_health_active":
+        return sorted(rows, key=lambda row: (row["health"], -row["fatigue"], row["id"]))[0]
+    if selector == "highest_fatigue_active":
+        return sorted(rows, key=lambda row: (-row["fatigue"], row["health"], row["id"]))[0]
+
+    seed = f"{event_def.get('id')}:{current_day}"
+    index = sum(ord(character) for character in seed) % len(rows)
+    return rows[index]
+
+
+def event_is_valid_for_today(conn, event_def, current_day):
+    if not event_def.get("requires_survivor"):
+        return True
+
+    return pick_event_target(conn, event_def, current_day) is not None
+
+
+def choose_daily_event(conn, current_day):
+    definitions = load_event_definitions()
+    valid_events = [
+        event for event in definitions
+        if event_is_valid_for_today(conn, event, current_day)
+    ]
+
+    if not valid_events:
+        return None, None
+
+    event_def = valid_events[(current_day - 1) % len(valid_events)]
+    target = pick_event_target(conn, event_def, current_day)
+    return event_def, target
+
+
+def build_pending_event_storage_payload(event_def, current_day, target):
+    payload = {
+        "status": EVENT_PAYLOAD_STATUS_PENDING,
+        "day": current_day,
+        "event_id": event_def["id"]
+    }
+
+    if target:
+        payload["target_survivor"] = {
+            "id": target["id"],
+            "name": target["name"]
+        }
+
+    return payload
+
+
+def event_already_handled_today(run_state):
+    if run_state["pending_event_id"]:
+        return True
+
+    payload = parse_compact_json_object(run_state["pending_event_payload"])
+    return (
+        payload.get("day") == run_state["current_day"]
+        and payload.get("status") == EVENT_PAYLOAD_STATUS_RESOLVED
+    )
+
+
+def ensure_daily_event_for_run(conn, run_state=None):
+    if not run_state:
+        run_state = read_current_run(conn)
+
+    if not run_state or run_state["game_status"] != "active":
+        return run_state
+
+    if run_state["actions_left"] <= 0 or event_already_handled_today(run_state):
+        return run_state
+
+    event_def, target = choose_daily_event(conn, run_state["current_day"])
+    if not event_def:
+        return run_state
+
+    payload = build_pending_event_storage_payload(
+        event_def,
+        run_state["current_day"],
+        target
+    )
+    conn.execute(
+        """
+        UPDATE run_state
+        SET pending_event_id = ?,
+            pending_event_payload = ?
+        WHERE id = ?
+        """,
+        (
+            event_def["id"],
+            dumps_compact_json(payload),
+            CURRENT_RUN_ID
+        )
+    )
+    return read_current_run(conn)
+
+
+def ensure_current_run_ready(conn):
+    run_state = ensure_current_run_exists(conn)
+    if not run_state:
+        return None
+
+    if run_state["game_status"] == "active":
+        restore_recovered_survivors(conn, run_state["current_day"])
+        run_state = ensure_daily_event_for_run(conn, read_current_run(conn))
+
+    return run_state
+
+
+def get_run_inactive_message(run_state):
+    if not run_state:
+        return RUN_INACTIVE_MESSAGE
+
+    return RUN_ENDED_MESSAGES.get(
+        run_state["game_status"],
+        RUN_INACTIVE_MESSAGE
+    )
+
+
+def reject_if_actions_exhausted(conn):
+    run_state = ensure_current_run_ready(conn)
+
+    if run_state and run_state["game_status"] != "active":
+        return run_state, jsonify({
+            "status": "error",
+            "message": get_run_inactive_message(run_state),
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    if run_state and run_state["actions_left"] <= 0:
+        return run_state, jsonify({
+            "status": "error",
+            "message": ACTION_EXHAUSTED_MESSAGE,
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    if run_state and run_state["pending_event_id"]:
+        return run_state, jsonify({
+            "status": "error",
+            "message": PENDING_EVENT_ACTION_BLOCK_MESSAGE,
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    return run_state, None, None
+
+
+def decrement_actions_safely(conn):
+    ensure_run_state_table(conn)
+    cursor = conn.execute(
+        """
+        UPDATE run_state
+        SET actions_left = actions_left - 1
+        WHERE id = ?
+          AND actions_left > 0
+          AND game_status = 'active'
+        """,
+        (CURRENT_RUN_ID,)
+    )
+
+    if cursor.rowcount == 0:
+        return None
+
+    return read_current_run(conn)
+
+
+def resolve_end_of_day(conn, run_state):
+    settled_day = run_state["current_day"]
+    total_days = run_state["total_days"]
+    upkeep = apply_shelter_upkeep(conn)
+    player = normalize_player_resources(conn)["player"]
+
+    if player["food"] <= 0 or player["power"] <= 0:
+        result = "lost"
+    elif settled_day >= total_days:
+        result = "won"
+    else:
+        result = "advanced"
+
+    summary = {
+        "settled_day": settled_day,
+        "upkeep": {
+            "paid": upkeep["paid"],
+            "shortfall": upkeep["shortfall"],
+            "fully_paid": upkeep["fully_paid"],
+            "team_penalty": upkeep["team_penalty"]
+        },
+        "result": result
+    }
+
+    if result == "advanced":
+        next_day = settled_day + 1
+        threat_days_left = max(total_days - (next_day - 1), 0)
+        summary["next_day"] = next_day
+        conn.execute(
+            """
+            UPDATE run_state
+            SET current_day = ?,
+                actions_left = actions_per_day,
+                threat_days_left = ?,
+                game_status = 'active',
+                pending_event_id = NULL,
+                pending_event_payload = '',
+                result = NULL,
+                last_settlement_summary = ?
+            WHERE id = ?
+            """,
+            (
+                next_day,
+                threat_days_left,
+                dumps_compact_json(summary),
+                CURRENT_RUN_ID
+            )
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE run_state
+            SET actions_left = 0,
+                threat_days_left = 0,
+                game_status = ?,
+                pending_event_id = NULL,
+                pending_event_payload = '',
+                result = ?,
+                last_settlement_summary = ?
+            WHERE id = ?
+            """,
+            (
+                result,
+                result,
+                dumps_compact_json(summary),
+                CURRENT_RUN_ID
+            )
+        )
+
+    return summary, read_current_run(conn)
+
+
+def consume_action_and_maybe_settle(conn):
+    run_state = decrement_actions_safely(conn)
+    if not run_state:
+        return None, None
+
+    if run_state["actions_left"] > 0:
+        run_state = ensure_current_run_ready(conn)
+        return run_state, None
+
+    day_transition, updated_run_state = resolve_end_of_day(conn, run_state)
+    updated_run_state = ensure_current_run_ready(conn)
+    return updated_run_state, day_transition
 
 
 def get_player_init_profile(conn):
@@ -436,7 +1189,8 @@ def reject_non_local_dev_request():
 
 def reset_current_run_state(conn):
     ensure_player_init_columns(conn)
-    reset_tables = ("survivors", "gacha_logs", "duty_logs", "offer_logs")
+    ensure_run_state_table(conn)
+    reset_tables = ("survivors", "gacha_logs", "duty_logs", "offer_logs", "run_state")
     deleted_counts = {}
 
     for table_name in reset_tables:
@@ -662,6 +1416,94 @@ def build_survivor_state_tags(fatigue, health):
     }
 
 
+def build_survivor_status_fields(survivor, current_day=None):
+    status = survivor["status"] if "status" in survivor.keys() else SURVIVOR_STATUS_ACTIVE
+    if status not in SURVIVOR_STATUSES:
+        status = SURVIVOR_STATUS_ACTIVE
+
+    available_on_day = (
+        survivor["available_on_day"]
+        if "available_on_day" in survivor.keys()
+        else 1
+    )
+    leave_reason = (
+        survivor["leave_reason"]
+        if "leave_reason" in survivor.keys()
+        else ""
+    ) or ""
+
+    if status == SURVIVOR_STATUS_INJURED:
+        reason = f"重伤停工，恢复日：第 {available_on_day} 天"
+        return {
+            "status": status,
+            "status_label": "重伤停工",
+            "available_on_day": available_on_day,
+            "leave_reason": "",
+            "assignable": False,
+            "unavailable_reason": reason,
+            "current_state_tag": "重伤停工",
+            "injured_tag": f"恢复日：第 {available_on_day} 天"
+        }
+
+    if status == SURVIVOR_STATUS_LEFT:
+        reason = leave_reason or "已离开避难所"
+        return {
+            "status": status,
+            "status_label": "已离队",
+            "available_on_day": available_on_day,
+            "leave_reason": reason,
+            "assignable": False,
+            "unavailable_reason": reason,
+            "current_state_tag": "已离队",
+            "injured_tag": None
+        }
+
+    return {
+        "status": SURVIVOR_STATUS_ACTIVE,
+        "status_label": "可值勤",
+        "available_on_day": available_on_day,
+        "leave_reason": "",
+        "assignable": True,
+        "unavailable_reason": "",
+        "current_state_tag": None,
+        "injured_tag": None
+    }
+
+
+def serialize_survivor(row, current_day=None):
+    personality = build_survivor_personality(row["mood"], row["role"])
+    state_tags = build_survivor_state_tags(row["fatigue"], row["health"])
+    status_fields = build_survivor_status_fields(row, current_day)
+    current_state_tag = (
+        status_fields["current_state_tag"]
+        or state_tags["current_state_tag"]
+    )
+    injured_tag = (
+        status_fields["injured_tag"]
+        if status_fields["injured_tag"] is not None
+        else state_tags["injured_tag"]
+    )
+
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "rarity": row["rarity"],
+        "role": row["role"],
+        "mood": row["mood"],
+        "fatigue": row["fatigue"],
+        "health": row["health"],
+        **build_survivor_profile_fields(personality),
+        "current_state_tag": current_state_tag,
+        "injured_tag": injured_tag,
+        "status": status_fields["status"],
+        "status_label": status_fields["status_label"],
+        "available_on_day": status_fields["available_on_day"],
+        "leave_reason": status_fields["leave_reason"],
+        "assignable": status_fields["assignable"],
+        "unavailable_reason": status_fields["unavailable_reason"]
+    }
+
+
 def build_duty_condition_phrase(state_tag):
     if state_tag == "疲惫":
         return "出发时已经疲惫"
@@ -736,11 +1578,13 @@ def get_resource_pressure_reason(player):
 
 
 def get_team_state_pressure_reason(conn):
+    ensure_survivor_state_columns(conn)
     rows = conn.execute(
         """
         SELECT fatigue, health
         FROM survivors
         WHERE owned = 1
+          AND status != 'left'
         """
     ).fetchall()
 
@@ -823,11 +1667,13 @@ def is_severe_emergency_pressure(conn, player):
         if player[resource_name] <= threshold:
             return True
 
+    ensure_survivor_state_columns(conn)
     rows = conn.execute(
         """
         SELECT fatigue, health
         FROM survivors
         WHERE owned = 1
+          AND status != 'left'
         """
     ).fetchall()
 
@@ -841,9 +1687,24 @@ def is_severe_emergency_pressure(conn, player):
     return len(rows) >= 2 and exhausted_count >= 2
 
 
-def get_offer_suppression_status(conn, trigger_reason, action_count, player):
+def get_offer_suppression_status(conn, trigger_reason, action_count, player, run_state):
+    current_day = run_state["current_day"] if run_state else 0
+    suppressed_until_day = (
+        run_state["offer_suppressed_until_day"]
+        if run_state
+        else 0
+    )
+    day_suppressed = (
+        suppressed_until_day > 0
+        and current_day <= suppressed_until_day
+    )
     status = {
-        "is_suppressed": False,
+        "is_suppressed": day_suppressed,
+        "day_suppressed": day_suppressed,
+        "suppress_until_day": suppressed_until_day,
+        "suppress_remaining_days": max(0, suppressed_until_day - current_day + 1)
+        if day_suppressed
+        else 0,
         "suppress_remaining_actions": 0,
         "suppress_until_action_count": None,
         "closed_action_count": None,
@@ -851,6 +1712,9 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player):
     }
 
     if not trigger_reason:
+        return status
+
+    if day_suppressed:
         return status
 
     ensure_offer_log_columns(conn)
@@ -879,6 +1743,7 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player):
 
     status.update({
         "is_suppressed": remaining_actions > 0 and not severe_override,
+        "day_suppressed": False,
         "suppress_remaining_actions": remaining_actions,
         "suppress_until_action_count": suppress_until,
         "closed_action_count": closed["action_count"],
@@ -888,10 +1753,17 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player):
 
 
 def get_emergency_offer_context(conn):
+    run_state = read_current_run(conn)
     resource_state = normalize_player_resources(conn)
     player = resource_state["player"]
+    ensure_survivor_state_columns(conn)
     survivor_count = conn.execute(
-        "SELECT COUNT(*) AS count FROM survivors WHERE owned = 1"
+        """
+        SELECT COUNT(*) AS count
+        FROM survivors
+        WHERE owned = 1
+          AND status != 'left'
+        """
     ).fetchone()["count"]
 
     trigger_reason = (
@@ -905,7 +1777,8 @@ def get_emergency_offer_context(conn):
         conn,
         trigger_reason,
         action_count,
-        player
+        player,
+        run_state
     )
     active = (
         survivor_count >= 1
@@ -923,6 +1796,7 @@ def get_emergency_offer_context(conn):
         "action_count": action_count,
         "purchased": purchased,
         "close_suppressed": suppression["is_suppressed"],
+        "run_state": run_state,
         **suppression
     }
 
@@ -968,11 +1842,13 @@ def clamp_state_value(value):
 
 
 def apply_emergency_offer_survivor_recovery(conn):
+    ensure_survivor_state_columns(conn)
     rows = conn.execute(
         """
         SELECT id, fatigue, health
         FROM survivors
         WHERE owned = 1
+          AND status != 'left'
         """
     ).fetchall()
 
@@ -1051,6 +1927,199 @@ def apply_player_resource_changes(conn, changes):
     }
 
 
+def get_int_delta(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def apply_event_resource_delta(conn, resource_delta):
+    if not isinstance(resource_delta, dict):
+        resource_delta = {}
+
+    player = normalize_player_resources(conn)["player"]
+    update_values = {}
+    actual_changes = {}
+
+    for resource_name in (
+        "food",
+        "power",
+        "materials",
+        "premium_currency"
+    ):
+        requested_delta = get_int_delta(resource_delta.get(resource_name, 0))
+        current_value = player[resource_name]
+        if resource_name == "premium_currency":
+            next_value = max(0, current_value + requested_delta)
+        else:
+            next_value = clamp_resource_value(current_value + requested_delta)
+
+        update_values[resource_name] = next_value
+        actual_changes[get_resource_change_key(resource_name)] = (
+            next_value - current_value
+        )
+
+    conn.execute(
+        """
+        UPDATE player
+        SET food = ?,
+            power = ?,
+            materials = ?,
+            premium_currency = ?
+        WHERE id = 1
+        """,
+        (
+            update_values["food"],
+            update_values["power"],
+            update_values["materials"],
+            update_values["premium_currency"]
+        )
+    )
+
+    return actual_changes
+
+
+def get_target_survivor_for_event(conn, event_payload):
+    target = event_payload.get("target_survivor") or {}
+    target_id = target.get("id")
+    if not target_id:
+        return None
+
+    ensure_survivor_state_columns(conn)
+    return conn.execute(
+        """
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
+        FROM survivors
+        WHERE id = ?
+          AND owned = 1
+        """,
+        (target_id,)
+    ).fetchone()
+
+
+def apply_survivor_numeric_delta(row, effect):
+    fatigue_delta = get_int_delta(effect.get("fatigue_delta", 0))
+    health_delta = get_int_delta(effect.get("health_delta", 0))
+    return {
+        "fatigue": clamp_state_value(row["fatigue"] + fatigue_delta),
+        "health": clamp_state_value(row["health"] + health_delta),
+        "fatigue_change": fatigue_delta,
+        "health_change": health_delta
+    }
+
+
+def apply_event_survivor_effect(conn, effect, event_payload, current_day):
+    if not isinstance(effect, dict):
+        return None
+
+    status_effect = effect.get("survivor_status")
+    if not status_effect:
+        return None
+
+    target = get_target_survivor_for_event(conn, event_payload)
+    if not target or target["status"] == SURVIVOR_STATUS_LEFT:
+        return {
+            "applied": False,
+            "message": "目标幸存者已经不可用，人员影响未生效。"
+        }
+
+    state_delta = apply_survivor_numeric_delta(target, effect)
+
+    if status_effect == SURVIVOR_STATUS_INJURED:
+        recovery_days = max(1, get_int_delta(effect.get("recovery_days", 1)))
+        available_on_day = current_day + recovery_days
+        conn.execute(
+            """
+            UPDATE survivors
+            SET fatigue = ?,
+                health = ?,
+                status = 'injured',
+                available_on_day = ?,
+                leave_reason = ''
+            WHERE id = ?
+            """,
+            (
+                state_delta["fatigue"],
+                state_delta["health"],
+                available_on_day,
+                target["id"]
+            )
+        )
+        return {
+            "applied": True,
+            "status": SURVIVOR_STATUS_INJURED,
+            "survivor_id": target["id"],
+            "survivor_name": target["name"],
+            "available_on_day": available_on_day,
+            "fatigue_change": state_delta["fatigue_change"],
+            "health_change": state_delta["health_change"],
+            "message": f"{target['name']}重伤停工，将在第 {available_on_day} 天后恢复。"
+        }
+
+    if status_effect == SURVIVOR_STATUS_LEFT:
+        leave_reason = effect.get("leave_reason") or "离开避难所"
+        conn.execute(
+            """
+            UPDATE survivors
+            SET fatigue = ?,
+                health = ?,
+                status = 'left',
+                available_on_day = ?,
+                leave_reason = ?
+            WHERE id = ?
+            """,
+            (
+                state_delta["fatigue"],
+                state_delta["health"],
+                current_day,
+                leave_reason,
+                target["id"]
+            )
+        )
+        return {
+            "applied": True,
+            "status": SURVIVOR_STATUS_LEFT,
+            "survivor_id": target["id"],
+            "survivor_name": target["name"],
+            "available_on_day": current_day,
+            "leave_reason": leave_reason,
+            "fatigue_change": state_delta["fatigue_change"],
+            "health_change": state_delta["health_change"],
+            "message": f"{target['name']}已离队：{leave_reason}。"
+        }
+
+    return None
+
+
+def apply_event_choice_effects(conn, run_state, event_def, event_payload, choice):
+    effects = choice.get("effects") or {}
+    resource_changes = apply_event_resource_delta(
+        conn,
+        effects.get("resource_delta", {})
+    )
+    survivor_effect = apply_event_survivor_effect(
+        conn,
+        effects.get("survivor", {}),
+        event_payload,
+        run_state["current_day"]
+    )
+    result_text = format_event_text(
+        choice.get("result_text", "事件已处理。"),
+        event_payload
+    )
+
+    return {
+        "event_id": event_def["id"],
+        "choice_id": choice.get("id"),
+        "title": format_event_text(event_def.get("title", ""), event_payload),
+        "result_text": result_text,
+        "resource_changes": resource_changes,
+        "survivor_effect": survivor_effect
+    }
+
+
 def apply_duty_operating_cost(changes, duty_type):
     costs = DUTY_OPERATING_COSTS.get(duty_type, {})
     adjusted = dict(changes)
@@ -1119,11 +2188,13 @@ def apply_shelter_upkeep(conn):
     }
 
     if not fully_paid:
+        ensure_survivor_state_columns(conn)
         rows = conn.execute(
             """
             SELECT id, fatigue, health
             FROM survivors
             WHERE owned = 1
+              AND status != 'left'
             """
         ).fetchall()
 
@@ -1179,11 +2250,13 @@ def build_shelter_upkeep_text(upkeep):
 
 
 def apply_power_shortage_penalty(conn):
+    ensure_survivor_state_columns(conn)
     rows = conn.execute(
         """
         SELECT id, fatigue
         FROM survivors
         WHERE owned = 1
+          AND status != 'left'
         """
     ).fetchall()
 
@@ -1271,6 +2344,37 @@ def resolve_survivor_state_change(survivor, duty_type):
     }
 
 
+def resolve_high_risk_survivor_consequence(survivor, duty_type, survivor_state, current_day):
+    if duty_type not in HIGH_RISK_DUTIES:
+        return None
+
+    poor_health = survivor["health"] <= 35
+    severe_health = survivor["health"] <= 20
+    severe_fatigue = survivor["fatigue"] >= 85
+
+    if severe_health and severe_fatigue:
+        return {
+            "status": SURVIVOR_STATUS_LEFT,
+            "available_on_day": current_day,
+            "leave_reason": "带伤高风险值勤后选择离开避难所",
+            "message": f"{survivor['name']}带伤完成高风险值勤后离队。"
+        }
+
+    if poor_health or severe_fatigue:
+        available_on_day = current_day + HIGH_RISK_INJURY_RECOVERY_DAYS
+        return {
+            "status": SURVIVOR_STATUS_INJURED,
+            "available_on_day": available_on_day,
+            "leave_reason": "",
+            "message": (
+                f"{survivor['name']}原本状态已经很差，高风险值勤后重伤停工，"
+                f"恢复日为第 {available_on_day} 天。"
+            )
+        }
+
+    return None
+
+
 def build_survivor_result(rarity, picked):
     result = {
         "name": picked["name"],
@@ -1278,7 +2382,10 @@ def build_survivor_result(rarity, picked):
         "role": picked["role"],
         "mood": picked["mood"],
         "fatigue": 0,
-        "health": 100
+        "health": 100,
+        "status": SURVIVOR_STATUS_ACTIVE,
+        "available_on_day": 1,
+        "leave_reason": ""
     }
     result.update(build_survivor_personality(result["mood"], result["role"]))
     result.update(build_survivor_state_tags(result["fatigue"], result["health"]))
@@ -1547,6 +2654,8 @@ def initialize_game():
             difficulty
         )
     )
+    create_current_run(conn, difficulty, count_as_new_run=True)
+    run_state = ensure_current_run_ready(conn)
     conn.commit()
 
     updated_player = conn.execute(
@@ -1562,7 +2671,8 @@ def initialize_game():
     init_payload = build_init_status_payload(updated_player)
     init_payload.update({
         "message": "避难所控制权已接入。",
-        "resources": build_resource_payload(updated_player)
+        "resources": build_resource_payload(updated_player),
+        "run_state": serialize_run_state(run_state)
     })
     return jsonify(init_payload)
 
@@ -1606,19 +2716,122 @@ def dev_demo_mode():
 @app.route("/api/resources", methods=["GET"])
 def resources():
     conn = get_db_connection()
+    run_state = ensure_current_run_ready(conn)
     resource_state = normalize_player_resources(conn)
     conn.commit()
     conn.close()
 
-    return jsonify(build_resource_payload(
+    payload = build_resource_payload(
         resource_state["player"],
         resource_state["repaired_deficit"]["power"]
-    ))
+    )
+    payload["run_state"] = serialize_run_state(run_state)
+    return jsonify(payload)
+
+
+@app.route("/api/event/resolve", methods=["POST"])
+def resolve_event():
+    payload = request.get_json(silent=True) or {}
+    choice_id = payload.get("choice_id")
+
+    if not choice_id:
+        return jsonify({
+            "status": "error",
+            "message": "参数错误，需要 choice_id"
+        }), 400
+
+    conn = get_db_connection()
+    run_state = ensure_current_run_ready(conn)
+
+    if not run_state or run_state["game_status"] != "active":
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": get_run_inactive_message(run_state),
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    if not run_state["pending_event_id"]:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "当前没有待处理事件。",
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    event_def = get_event_definition(run_state["pending_event_id"])
+    event_payload = parse_compact_json_object(run_state["pending_event_payload"])
+    if not event_def:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "事件配置缺失，请刷新后重试。",
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    choice = None
+    for candidate in event_def.get("choices", []):
+        if candidate.get("id") == choice_id:
+            choice = candidate
+            break
+
+    if not choice:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "事件选择不存在。",
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
+    result = apply_event_choice_effects(
+        conn,
+        run_state,
+        event_def,
+        event_payload,
+        choice
+    )
+    resolved_payload = dict(event_payload)
+    resolved_payload.update({
+        "status": EVENT_PAYLOAD_STATUS_RESOLVED,
+        "resolved_choice_id": choice_id
+    })
+    conn.execute(
+        """
+        UPDATE run_state
+        SET pending_event_id = NULL,
+            pending_event_payload = ?
+        WHERE id = ?
+        """,
+        (
+            dumps_compact_json(resolved_payload),
+            CURRENT_RUN_ID
+        )
+    )
+    run_state = read_current_run(conn)
+    resource_state = normalize_player_resources(conn)
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "message": "事件已处理。",
+        "result": result,
+        "resources": build_resource_payload(
+            resource_state["player"],
+            resource_state["repaired_deficit"]["power"]
+        ),
+        "run_state": serialize_run_state(run_state)
+    })
 
 
 @app.route("/api/gacha", methods=["POST"])
 def gacha():
     conn = get_db_connection()
+    _, action_response, action_status = reject_if_actions_exhausted(conn)
+    if action_response is not None:
+        conn.close()
+        return action_response, action_status
+
     player = conn.execute(
         "SELECT premium_currency FROM player WHERE id = 1"
     ).fetchone()
@@ -1652,8 +2865,11 @@ def gacha():
     else:
         conn.execute(
             """
-            INSERT INTO survivors (name, rarity, role, mood, fatigue, health, owned)
-            VALUES (?, ?, ?, ?, 0, 100, 1)
+            INSERT INTO survivors (
+                name, rarity, role, mood, fatigue, health,
+                status, available_on_day, leave_reason, owned
+            )
+            VALUES (?, ?, ?, ?, 0, 100, 'active', 1, '', 1)
             """,
             (result["name"], result["rarity"], result["role"], result["mood"])
         )
@@ -1666,6 +2882,17 @@ def gacha():
         (result["name"], result["rarity"], result["role"])
     )
 
+    run_state, day_transition = consume_action_and_maybe_settle(conn)
+    if not run_state:
+        conn.rollback()
+        run_state = ensure_current_run_exists(conn)
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": ACTION_EXHAUSTED_MESSAGE,
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
     conn.commit()
 
     updated_player = conn.execute(
@@ -1674,7 +2901,7 @@ def gacha():
 
     conn.close()
 
-    return jsonify({
+    response_payload = {
         "status": "ok",
         "message": "Duplicate survivor converted to compensation"
         if duplicate_survivor_exists else "Gacha success",
@@ -1683,38 +2910,32 @@ def gacha():
         "demo_scripted": scripted_result is not None,
         "survivor": result,
         "materials": updated_player["materials"],
-        "premium_currency_left": updated_player["premium_currency"]
-    })
+        "premium_currency_left": updated_player["premium_currency"],
+        "run_state": serialize_run_state(run_state)
+    }
+    if day_transition:
+        response_payload["day_transition"] = day_transition
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/survivors", methods=["GET"])
 def survivors():
     conn = get_db_connection()
+    run_state = ensure_current_run_ready(conn)
     rows = conn.execute(
         """
-        SELECT id, name, rarity, role, mood, fatigue, health
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
         FROM survivors
         ORDER BY id DESC
         """
     ).fetchall()
+    conn.commit()
     conn.close()
 
-    data = []
-    for row in rows:
-        personality = build_survivor_personality(row["mood"], row["role"])
-        state_tags = build_survivor_state_tags(row["fatigue"], row["health"])
-        data.append({
-            "id": row["id"],
-            "name": row["name"],
-            "rarity": row["rarity"],
-            "role": row["role"],
-            "mood": row["mood"],
-            "fatigue": row["fatigue"],
-            "health": row["health"],
-            **build_survivor_profile_fields(personality),
-            "current_state_tag": state_tags["current_state_tag"],
-            "injured_tag": state_tags["injured_tag"]
-        })
+    current_day = run_state["current_day"] if run_state else None
+    data = [serialize_survivor(row, current_day) for row in rows]
 
     return jsonify(data)
 
@@ -1733,9 +2954,15 @@ def duty():
 
     conn = get_db_connection()
 
+    run_state, action_response, action_status = reject_if_actions_exhausted(conn)
+    if action_response is not None:
+        conn.close()
+        return action_response, action_status
+
     survivor = conn.execute(
         """
-        SELECT id, name, rarity, role, mood, fatigue, health
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
         FROM survivors
         WHERE id = ?
         """,
@@ -1749,42 +2976,71 @@ def duty():
             "message": "survivor 不存在"
         }), 404
 
+    if survivor["status"] != SURVIVOR_STATUS_ACTIVE:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "该幸存者当前不可值勤。",
+            "survivor": serialize_survivor(
+                survivor,
+                run_state["current_day"] if run_state else None
+            ),
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
     if survivor["health"] <= 10 and duty_type in HIGH_RISK_DUTIES:
-        personality = build_survivor_personality(survivor["mood"], survivor["role"])
-        state_tags = build_survivor_state_tags(survivor["fatigue"], survivor["health"])
         conn.close()
         return jsonify({
             "status": "error",
             "message": f"{survivor['name']}健康过低，无法执行外出搜集或夜间守卫。",
-            "survivor": {
-                "id": survivor["id"],
-                "name": survivor["name"],
-                "rarity": survivor["rarity"],
-                "role": survivor["role"],
-                "mood": survivor["mood"],
-                "fatigue": survivor["fatigue"],
-                "health": survivor["health"],
-                **build_survivor_profile_fields(personality),
-                "current_state_tag": state_tags["current_state_tag"],
-                "injured_tag": state_tags["injured_tag"]
-            }
+            "survivor": serialize_survivor(
+                survivor,
+                run_state["current_day"] if run_state else None
+            ),
+            "run_state": serialize_run_state(run_state)
         }), 400
 
-    duty_action_count = get_completed_duty_count(conn) + 1
-    upkeep_due = duty_action_count % SHELTER_UPKEEP_DUTY_INTERVAL == 0
     result = resolve_duty_result(survivor, duty_type)
     survivor_state = result["survivor_state"]
+    consequence = resolve_high_risk_survivor_consequence(
+        survivor,
+        duty_type,
+        survivor_state,
+        run_state["current_day"] if run_state else 1
+    )
+    next_status = SURVIVOR_STATUS_ACTIVE
+    next_available_on_day = survivor["available_on_day"]
+    next_leave_reason = ""
+
+    if consequence:
+        next_status = consequence["status"]
+        next_available_on_day = consequence["available_on_day"]
+        next_leave_reason = consequence.get("leave_reason", "")
+        result["survivor_consequence"] = consequence
+        result["result_text"] = (
+            f"{result['result_text']} {consequence['message']}"
+        )
+
+    survivor_state["status"] = next_status
+    survivor_state["available_on_day"] = next_available_on_day
+    survivor_state["leave_reason"] = next_leave_reason
 
     conn.execute(
         """
         UPDATE survivors
         SET fatigue = ?,
-            health = ?
+            health = ?,
+            status = ?,
+            available_on_day = ?,
+            leave_reason = ?
         WHERE id = ?
         """,
         (
             survivor_state["fatigue"],
             survivor_state["health"],
+            next_status,
+            next_available_on_day,
+            next_leave_reason,
             survivor["id"]
         )
     )
@@ -1798,32 +3054,6 @@ def duty():
     upkeep = None
     direct_power_shortfall = resource_update["shortfall"]["power"]
     total_power_shortfall = direct_power_shortfall
-    if upkeep_due:
-        upkeep = apply_shelter_upkeep(conn)
-        for resource_name, paid_amount in upkeep["paid"].items():
-            result[get_resource_change_key(resource_name)] -= paid_amount
-
-        total_power_shortfall += upkeep["shortfall"]["power"]
-        upkeep_text = build_shelter_upkeep_text(upkeep)
-        if upkeep_text:
-            result["result_text"] = f"{result['result_text']} {upkeep_text}"
-
-        if upkeep["team_penalty"]["applied"]:
-            survivor_state["fatigue_change"] += (
-                upkeep["team_penalty"]["fatigue_change"]
-            )
-            survivor_state["health_change"] += (
-                upkeep["team_penalty"]["health_change"]
-            )
-            survivor_state["fatigue"] = clamp_state_value(
-                survivor_state["fatigue"]
-                + upkeep["team_penalty"]["fatigue_change"]
-            )
-            survivor_state["health"] = clamp_state_value(
-                survivor_state["health"]
-                + upkeep["team_penalty"]["health_change"]
-            )
-
     power_shortage_penalty = {
         "applied": False,
         "affected_survivor_count": 0,
@@ -1832,13 +3062,14 @@ def duty():
     }
     if direct_power_shortfall > 0:
         power_shortage_penalty = apply_power_shortage_penalty(conn)
-        survivor_state["fatigue_change"] += (
-            power_shortage_penalty["fatigue_change"]
-        )
-        survivor_state["fatigue"] = clamp_state_value(
-            survivor_state["fatigue"]
-            + power_shortage_penalty["fatigue_change"]
-        )
+        if next_status != SURVIVOR_STATUS_LEFT:
+            survivor_state["fatigue_change"] += (
+                power_shortage_penalty["fatigue_change"]
+            )
+            survivor_state["fatigue"] = clamp_state_value(
+                survivor_state["fatigue"]
+                + power_shortage_penalty["fatigue_change"]
+            )
 
         power_shortage_text = build_power_shortage_text(direct_power_shortfall)
         if power_shortage_text:
@@ -1876,39 +3107,50 @@ def duty():
         )
     )
 
+    run_state, day_transition = consume_action_and_maybe_settle(conn)
+    if not run_state:
+        conn.rollback()
+        run_state = ensure_current_run_exists(conn)
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": ACTION_EXHAUSTED_MESSAGE,
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
     conn.commit()
 
     updated_player = conn.execute(
         "SELECT food, power, materials, premium_currency FROM player WHERE id = 1"
     ).fetchone()
+    updated_survivor = conn.execute(
+        """
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
+        FROM survivors
+        WHERE id = ?
+        """,
+        (survivor["id"],)
+    ).fetchone()
 
     conn.close()
 
-    personality = build_survivor_personality(survivor["mood"], survivor["role"])
-    state_tags = build_survivor_state_tags(
-        survivor_state["fatigue"],
-        survivor_state["health"]
-    )
-
-    return jsonify({
+    response_payload = {
         "status": "ok",
         "message": "Duty success",
-        "survivor": {
-            "id": survivor["id"],
-            "name": survivor["name"],
-            "rarity": survivor["rarity"],
-            "role": survivor["role"],
-            "mood": survivor["mood"],
-            "fatigue": survivor_state["fatigue"],
-            "health": survivor_state["health"],
-            **build_survivor_profile_fields(personality),
-            "current_state_tag": state_tags["current_state_tag"],
-            "injured_tag": state_tags["injured_tag"]
-        },
+        "survivor": serialize_survivor(
+            updated_survivor,
+            run_state["current_day"] if run_state else None
+        ),
         "duty_type": duty_type,
         "result": result,
-        "resources": build_resource_payload(updated_player)
-    })
+        "resources": build_resource_payload(updated_player),
+        "run_state": serialize_run_state(run_state)
+    }
+    if day_transition:
+        response_payload["day_transition"] = day_transition
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/rest", methods=["POST"])
@@ -1924,9 +3166,15 @@ def rest_survivor():
 
     conn = get_db_connection()
 
+    run_state, action_response, action_status = reject_if_actions_exhausted(conn)
+    if action_response is not None:
+        conn.close()
+        return action_response, action_status
+
     survivor = conn.execute(
         """
-        SELECT id, name, rarity, role, mood, fatigue, health
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
         FROM survivors
         WHERE id = ?
         """,
@@ -1939,6 +3187,18 @@ def rest_survivor():
             "status": "error",
             "message": "survivor 不存在"
         }), 404
+
+    if survivor["status"] != SURVIVOR_STATUS_ACTIVE:
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": "该幸存者当前不可休整。",
+            "survivor": serialize_survivor(
+                survivor,
+                run_state["current_day"] if run_state else None
+            ),
+            "run_state": serialize_run_state(run_state)
+        }), 400
 
     updated_fatigue = clamp_state_value(survivor["fatigue"] - 25)
     updated_health = clamp_state_value(survivor["health"] + 10)
@@ -1981,27 +3241,36 @@ def rest_survivor():
         )
     )
 
+    run_state, day_transition = consume_action_and_maybe_settle(conn)
+    if not run_state:
+        conn.rollback()
+        run_state = ensure_current_run_exists(conn)
+        conn.close()
+        return jsonify({
+            "status": "error",
+            "message": ACTION_EXHAUSTED_MESSAGE,
+            "run_state": serialize_run_state(run_state)
+        }), 400
+
     conn.commit()
+    updated_survivor = conn.execute(
+        """
+        SELECT id, name, rarity, role, mood, fatigue, health,
+               status, available_on_day, leave_reason
+        FROM survivors
+        WHERE id = ?
+        """,
+        (survivor["id"],)
+    ).fetchone()
     conn.close()
 
-    personality = build_survivor_personality(survivor["mood"], survivor["role"])
-    state_tags = build_survivor_state_tags(updated_fatigue, updated_health)
-
-    return jsonify({
+    response_payload = {
         "status": "ok",
         "message": "Rest success",
-        "survivor": {
-            "id": survivor["id"],
-            "name": survivor["name"],
-            "rarity": survivor["rarity"],
-            "role": survivor["role"],
-            "mood": survivor["mood"],
-            "fatigue": updated_fatigue,
-            "health": updated_health,
-            **build_survivor_profile_fields(personality),
-            "current_state_tag": state_tags["current_state_tag"],
-            "injured_tag": state_tags["injured_tag"]
-        },
+        "survivor": serialize_survivor(
+            updated_survivor,
+            run_state["current_day"] if run_state else None
+        ),
         "duty_type": "rest",
         "result": {
             "food_change": 0,
@@ -2014,8 +3283,13 @@ def rest_survivor():
                 "fatigue": updated_fatigue,
                 "health": updated_health
             }
-        }
-    })
+        },
+        "run_state": serialize_run_state(run_state)
+    }
+    if day_transition:
+        response_payload["day_transition"] = day_transition
+
+    return jsonify(response_payload)
 
 
 @app.route("/api/duty-logs", methods=["GET"])
@@ -2099,6 +3373,9 @@ def emergency_offer_state():
         "trigger_reason": context["trigger_reason"],
         "suppressed": context["close_suppressed"],
         "is_suppressed": context["is_suppressed"],
+        "day_suppressed": context["day_suppressed"],
+        "suppress_until_day": context["suppress_until_day"],
+        "suppress_remaining_days": context["suppress_remaining_days"],
         "suppress_remaining_actions": context["suppress_remaining_actions"],
         "severe_pressure_override": context["severe_pressure_override"],
         "offer": build_emergency_offer(context["raw_trigger_reason"])
@@ -2126,6 +3403,13 @@ def emergency_offer_close():
     conn = get_db_connection()
     context = get_emergency_offer_context(conn)
     log_offer_event(conn, "closed", context)
+    run_state = context.get("run_state")
+    suppress_until_day = 0
+    if run_state:
+        suppress_until_day = set_offer_suppression_window(
+            conn,
+            run_state["current_day"]
+        )
     conn.commit()
     conn.close()
 
@@ -2134,6 +3418,10 @@ def emergency_offer_close():
         "message": "Offer close logged",
         "active": context["active"],
         "trigger_reason": context["trigger_reason"],
+        "suppress_until_day": suppress_until_day,
+        "suppress_remaining_days": EMERGENCY_OFFER_SUPPRESS_DAYS_AFTER_CLOSE + 1
+        if suppress_until_day
+        else 0,
         "suppress_remaining_actions": EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW
     })
 

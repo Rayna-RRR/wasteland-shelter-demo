@@ -2,6 +2,7 @@ const api = require("../../utils/api")
 const format = require("../../utils/format")
 
 const MIN_REVEAL_DURATION = 1600
+const ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
 
 function getErrorMessage(res, fallback) {
   const message = res && res.data && res.data.message
@@ -67,6 +68,77 @@ function buildSurvivorResult(data) {
   }
 }
 
+function normalizeRunState(data) {
+  const runState = data && data.run_state
+
+  if (!runState) {
+    return {
+      current_day: "--",
+      total_days: "--",
+      actions_left: "--",
+      actions_per_day: "--",
+      threat_days_left: "--",
+      game_status: "inactive"
+    }
+  }
+
+  return {
+    current_day: runState.current_day,
+    total_days: runState.total_days,
+    actions_left: runState.actions_left,
+    actions_per_day: runState.actions_per_day,
+    threat_days_left: runState.threat_days_left,
+    game_status: runState.game_status || "active"
+  }
+}
+
+function getRunBlockedMessage(runState) {
+  if (runState.game_status === "won") {
+    return "避难所已撑过最终日，本轮已胜利。"
+  }
+
+  if (runState.game_status === "lost") {
+    return "避难所已经失守，本轮已结束。"
+  }
+
+  return ACTION_EXHAUSTED_MESSAGE
+}
+
+function getDayTransitionMessage(dayTransition) {
+  if (!dayTransition) {
+    return ""
+  }
+
+  if (dayTransition.result === "won") {
+    return "日终结算完成，本轮胜利。"
+  }
+
+  if (dayTransition.result === "lost") {
+    return "日终结算完成，本轮失败。"
+  }
+
+  if (dayTransition.result === "advanced") {
+    return `日终结算完成，进入第 ${dayTransition.next_day} 天。`
+  }
+
+  return "日终结算完成。"
+}
+
+function buildRunState(data) {
+  const runState = normalizeRunState(data)
+  const hasRunState = Boolean(data && data.run_state)
+  const runActive = runState.game_status === "active"
+  const noActionsLeft = hasRunState && runActive && Number(runState.actions_left) <= 0
+
+  return {
+    hasRunState,
+    runState,
+    noActionsLeft,
+    actionBlocked: hasRunState && (!runActive || noActionsLeft),
+    actionBlockMessage: getRunBlockedMessage(runState)
+  }
+}
+
 Page({
   data: {
     loadingResources: false,
@@ -77,6 +149,11 @@ Page({
     isPullAnimating: false,
     revealStatusText: "招募舱待命",
     showResultCard: false,
+    hasRunState: false,
+    runState: normalizeRunState(),
+    noActionsLeft: false,
+    actionBlocked: false,
+    actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
     resetStateVersion: 0
   },
 
@@ -121,6 +198,11 @@ Page({
       isPullAnimating: false,
       revealStatusText: "招募舱待命",
       showResultCard: false,
+      hasRunState: false,
+      runState: normalizeRunState(),
+      noActionsLeft: false,
+      actionBlocked: false,
+      actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
       resetStateVersion: this.data.resetStateVersion
     }, extraState || {}))
   },
@@ -140,9 +222,9 @@ Page({
     api.getResources()
       .then((res) => {
         if (res.statusCode === 200 && res.data) {
-          this.setData({
+          this.setData(Object.assign({
             resources: format.formatResources(res.data)
-          })
+          }, buildRunState(res.data)))
           return
         }
 
@@ -167,6 +249,17 @@ Page({
       return
     }
 
+    if (this.data.actionBlocked) {
+      this.setData({
+        errorMessage: this.data.actionBlockMessage
+      })
+      wx.showToast({
+        title: this.data.actionBlockMessage,
+        icon: "none"
+      })
+      return
+    }
+
     this.setData({
       pulling: true,
       errorMessage: "",
@@ -182,13 +275,16 @@ Page({
           return {
             ok: true,
             survivor: buildSurvivorResult(res.data),
-            duplicate: Boolean(res.data.duplicate)
+            duplicate: Boolean(res.data.duplicate),
+            runStateData: res.data,
+            dayTransition: res.data.day_transition || null
           }
         }
 
         return {
           ok: false,
-          message: getErrorMessage(res, "招募失败")
+          message: getErrorMessage(res, "招募失败"),
+          runStateData: res && res.data
         }
       })
       .catch(() => {
@@ -203,26 +299,32 @@ Page({
         const result = results[0]
 
         if (result.ok) {
-          this.setData({
+          this.setData(Object.assign({
             survivor: result.survivor,
             isPullAnimating: false,
             revealStatusText: "信号锁定",
             showResultCard: true
-          })
+          }, buildRunState(result.runStateData)))
           wx.showToast({
             title: result.duplicate ? "获得补偿" : "招募成功",
             icon: "success"
           })
+          if (result.dayTransition) {
+            wx.showToast({
+              title: getDayTransitionMessage(result.dayTransition),
+              icon: "none"
+            })
+          }
           this.loadResources()
           return
         }
 
-        this.setData({
+        this.setData(Object.assign({
           errorMessage: result.message,
           isPullAnimating: false,
           revealStatusText: "信号中断",
           showResultCard: Boolean(this.data.survivor)
-        })
+        }, buildRunState(result.runStateData)))
         wx.showToast({
           title: result.message,
           icon: "none"

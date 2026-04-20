@@ -11,6 +11,25 @@
   box-shadow: 0 12rpx 34rpx rgba(0, 0, 0, 0.28);
 }
 
+.page-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.page-resource-grid + .page-resource-grid {
+  margin-top: 16rpx;
+}
+
+.page-resource-grid .resource-item {
+  width: auto;
+  min-width: 0;
+}
+
+.page-resource-grid .resource-item--wide {
+  grid-column: 1 / -1;
+}
+
 .survivor-card::after,
 .selected-duty-card::after {
   content: "";
@@ -71,6 +90,19 @@
 
 .survivor-card--selected::after {
   background: var(--radiation-green);
+}
+
+.survivor-card--unavailable {
+  opacity: 0.62;
+  border-color: rgba(155, 146, 134, 0.30);
+  border-left-color: rgba(155, 146, 134, 0.68);
+  background:
+    linear-gradient(135deg, rgba(95, 90, 82, 0.16), transparent 46%),
+    rgba(18, 18, 18, 0.76);
+}
+
+.survivor-card--unavailable::after {
+  background: rgba(155, 146, 134, 0.54);
 }
 
 .survivor-heading {
@@ -351,6 +383,15 @@
   border-left-color: var(--metal-light);
 }
 
+.selected-duty-card--unavailable {
+  border-color: rgba(155, 146, 134, 0.34);
+  border-left-color: rgba(155, 146, 134, 0.72);
+  background:
+    linear-gradient(135deg, rgba(95, 90, 82, 0.16), transparent 48%),
+    rgba(18, 18, 18, 0.86);
+  box-shadow: 0 14rpx 36rpx rgba(0, 0, 0, 0.28);
+}
+
 .state-panel {
   margin-top: 18rpx;
   padding: 18rpx 20rpx;
@@ -425,15 +466,15 @@
 }
 
 .duty-button-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12rpx;
   margin-top: 22rpx;
 }
 
 .dispatch-label {
   display: block;
-  width: 100%;
+  grid-column: 1 / -1;
   color: var(--desert-yellow);
   font-size: 24rpx;
   font-weight: 700;
@@ -441,7 +482,7 @@
 
 .dispatch-helper {
   display: block;
-  width: 100%;
+  grid-column: 1 / -1;
   margin-top: -2rpx;
   color: rgba(211, 211, 211, 0.74);
   font-size: 23rpx;
@@ -449,8 +490,8 @@
 }
 
 .duty-button {
-  flex: 1 1 30%;
-  min-width: 188rpx;
+  width: 100%;
+  min-width: 0;
   min-height: 68rpx;
   margin: 0;
   border: 1rpx solid rgba(193, 154, 107, 0.34);
@@ -473,6 +514,11 @@
   border-color: rgba(211, 211, 211, 0.16);
   background: #343434;
   color: rgba(211, 211, 211, 0.58);
+}
+
+.duty-button-list > .message-card {
+  grid-column: 1 / -1;
+  margin-top: 4rpx;
 }
 
 .rest-button {

@@ -6,7 +6,7 @@
 
   <view class="section">
     <text class="section-title">当前资源</text>
-    <view class="resource-grid">
+    <view class="resource-grid page-resource-grid">
       <view class="resource-item">
         <text class="resource-label">食物</text>
         <text class="resource-value">{{resources.food}}</text>
@@ -27,6 +27,20 @@
     <view wx:if="{{loadingResources}}" class="message-card">
       <text class="muted">资源刷新中...</text>
     </view>
+    <view wx:if="{{hasRunState}}" class="resource-grid page-resource-grid run-state-grid">
+      <view class="resource-item">
+        <text class="resource-label">当前天数</text>
+        <text class="resource-value">{{runState.current_day}} / {{runState.total_days}}</text>
+      </view>
+      <view class="resource-item">
+        <text class="resource-label">今日行动</text>
+        <text class="resource-value">{{runState.actions_left}} / {{runState.actions_per_day}}</text>
+      </view>
+      <view class="resource-item resource-item--wide">
+        <text class="resource-label">威胁倒计时</text>
+        <text class="resource-value">{{runState.threat_days_left}}</text>
+      </view>
+    </view>
   </view>
 
   <view class="section">
@@ -40,7 +54,10 @@
         <text class="console-kicker">招募控制台</text>
         <text class="console-status">{{revealStatusText}}</text>
       </view>
-      <button class="action-button recruit-switch" hover-class="action-button--active" bindtap="pullSurvivor" loading="{{pulling}}" disabled="{{pulling}}">{{pulling ? "信号接入中..." : "进行一次招募"}}</button>
+      <button class="action-button recruit-switch" hover-class="action-button--active" bindtap="pullSurvivor" loading="{{pulling}}" disabled="{{pulling || actionBlocked}}">{{actionBlocked ? "本轮行动已结束" : "进行一次招募"}}</button>
+      <view wx:if="{{actionBlocked}}" class="message-card">
+        <text class="muted">{{actionBlockMessage}}</text>
+      </view>
       <view wx:if="{{isPullAnimating}}" class="reveal-panel">
         <text class="reveal-title">信号解码中</text>
         <text class="reveal-copy">招募舱正在校准身份信标...</text>

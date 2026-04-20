@@ -87,6 +87,75 @@
     </view>
   </view>
 
+  <view wx:if="{{hasRunState}}" class="section commander-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">当前局</text>
+        <text class="section-title">今日行动</text>
+      </view>
+      <text class="{{runStatusClass}}">{{runStatusLabel}}</text>
+    </view>
+    <view class="commander-grid">
+      <view class="commander-chip">
+        <text class="commander-label">当前天数</text>
+        <text class="commander-value">第 {{runState.current_day}} / {{runState.total_days}} 天</text>
+      </view>
+      <view class="commander-chip">
+        <text class="commander-label">剩余行动</text>
+        <text class="commander-value">{{runState.actions_left}} / {{runState.actions_per_day}}</text>
+      </view>
+      <view class="commander-chip commander-chip--wide">
+        <text class="commander-label">威胁倒计时</text>
+        <text class="commander-value">{{runState.threat_days_left}} 天</text>
+      </view>
+    </view>
+    <view wx:if="{{runResultMessage}}" class="message-card">
+      <text class="muted">{{runResultMessage}}</text>
+    </view>
+    <view wx:if="{{hasSettlementSummary}}" class="message-card">
+      <text class="muted">{{settlementSummary.title}}</text>
+      <text class="muted">{{settlementSummary.resultText}}</text>
+      <text class="muted">{{settlementSummary.paidText}}</text>
+      <text class="muted">{{settlementSummary.shortfallText}}</text>
+      <text class="muted">{{settlementSummary.teamPenaltyText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{hasPendingEvent || eventResultMessage || eventErrorMessage}}" class="section event-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">今日事件</text>
+        <text class="section-title">待处理状况</text>
+      </view>
+      <text wx:if="{{hasPendingEvent}}" class="resource-status resource-status--warning">需选择</text>
+    </view>
+    <view wx:if="{{hasPendingEvent}}" class="event-card">
+      <text class="event-title">{{pendingEvent.title}}</text>
+      <text class="event-copy">{{pendingEvent.description}}</text>
+      <view class="event-choice-list">
+        <button
+          wx:for="{{pendingEvent.choices}}"
+          wx:key="id"
+          class="event-choice-button"
+          hover-class="event-choice-button--active"
+          data-choice-id="{{item.id}}"
+          bindtap="resolvePendingEvent"
+          loading="{{eventResolving}}"
+          disabled="{{eventResolving}}"
+        >
+          <text class="event-choice-label">{{item.label}}</text>
+          <text class="event-choice-desc">{{item.description}}</text>
+        </button>
+      </view>
+    </view>
+    <view wx:if="{{eventErrorMessage}}" class="message-card">
+      <text class="muted">{{eventErrorMessage}}</text>
+    </view>
+    <view wx:if="{{eventResultMessage}}" class="message-card">
+      <text class="muted">{{eventResultMessage}}</text>
+    </view>
+  </view>
+
   <view class="section resource-section">
     <view class="section-heading">
       <view>

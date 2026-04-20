@@ -2,6 +2,25 @@
   min-height: 120rpx;
 }
 
+.page-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.page-resource-grid + .page-resource-grid {
+  margin-top: 16rpx;
+}
+
+.page-resource-grid .resource-item {
+  width: auto;
+  min-width: 0;
+}
+
+.page-resource-grid .resource-item--wide {
+  grid-column: 1 / -1;
+}
+
 .recruit-console {
   position: relative;
   box-sizing: border-box;

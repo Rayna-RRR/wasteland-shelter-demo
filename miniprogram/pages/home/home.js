@@ -18,9 +18,9 @@ const RESOURCE_META = [
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
 
 const DIFFICULTY_NOTES = {
-  "稳健": "开局配给：食物120 / 电力110 / 材料90 / 招募券60，适合熟悉流程。",
-  "标准": "开局配给：食物100 / 电力100 / 材料70 / 招募券40，适合常规轮值。",
-  "极端": "开局配给：食物70 / 电力75 / 材料45 / 招募券20，资源压力会更早出现。"
+  "稳健": "开局配给：食物100 / 电力95 / 材料70 / 招募券45，适合熟悉流程但仍需规划。",
+  "标准": "开局配给：食物80 / 电力80 / 材料55 / 招募券30，适合常规轮值。",
+  "极端": "开局配给：食物55 / 电力60 / 材料32 / 招募券15，资源压力会更早出现。"
 }
 
 function getNumberValue(value) {
@@ -149,6 +149,196 @@ function buildEmptyResourceState() {
   }, buildResourceState(resources))
 }
 
+function normalizeRunState(data) {
+  const runState = data && data.run_state
+
+  if (!runState) {
+    return {
+      current_day: "--",
+      total_days: "--",
+      actions_left: "--",
+      actions_per_day: "--",
+      threat_days_left: "--",
+      game_status: "inactive",
+      pending_event_id: "",
+      pending_event: null,
+      result: "",
+      last_settlement_summary: ""
+    }
+  }
+
+  return {
+    current_day: runState.current_day,
+    total_days: runState.total_days,
+    actions_left: runState.actions_left,
+    actions_per_day: runState.actions_per_day,
+    threat_days_left: runState.threat_days_left,
+    game_status: runState.game_status || "active",
+    pending_event_id: runState.pending_event_id || "",
+    pending_event: runState.pending_event || null,
+    result: runState.result || "",
+    last_settlement_summary: runState.last_settlement_summary || ""
+  }
+}
+
+function normalizePendingEvent(runState) {
+  const pendingEvent = runState && runState.pending_event
+
+  if (!pendingEvent) {
+    return null
+  }
+
+  return {
+    id: pendingEvent.id || "",
+    day: pendingEvent.day || runState.current_day,
+    title: pendingEvent.title || "今日事件",
+    description: pendingEvent.description || "",
+    targetSurvivor: pendingEvent.target_survivor || null,
+    choices: Array.isArray(pendingEvent.choices) ? pendingEvent.choices.map((choice) => {
+      return {
+        id: choice.id,
+        label: choice.label || "处理",
+        description: choice.description || ""
+      }
+    }) : []
+  }
+}
+
+function parseSettlementSummary(summaryText) {
+  if (!summaryText || typeof summaryText !== "string") {
+    return null
+  }
+
+  try {
+    const summary = JSON.parse(summaryText)
+    return summary && typeof summary === "object" ? summary : null
+  } catch (error) {
+    return null
+  }
+}
+
+function formatResourceParts(values) {
+  const data = values || {}
+  const rows = [
+    { label: "食物", value: data.food || 0 },
+    { label: "电力", value: data.power || 0 },
+    { label: "材料", value: data.materials || 0 }
+  ]
+
+  return rows.map((item) => {
+    return `${item.label} ${item.value}`
+  }).join(" / ")
+}
+
+function getRunStatusLabel(status) {
+  if (status === "won") {
+    return "已胜利"
+  }
+
+  if (status === "lost") {
+    return "已失败"
+  }
+
+  if (status === "active") {
+    return "进行中"
+  }
+
+  return "未开始"
+}
+
+function getRunStatusClass(status) {
+  if (status === "won") {
+    return "resource-status resource-status--normal"
+  }
+
+  if (status === "lost") {
+    return "resource-status resource-status--critical"
+  }
+
+  if (status === "active") {
+    return "resource-status resource-status--normal"
+  }
+
+  return "resource-status resource-status--warning"
+}
+
+function getRunResultMessage(status) {
+  if (status === "won") {
+    return "避难所撑过了最终日，本轮胜利。"
+  }
+
+  if (status === "lost") {
+    return "食物或电力在日终结算后归零，本轮失败。"
+  }
+
+  return ""
+}
+
+function getSettlementResultText(summary) {
+  if (!summary) {
+    return ""
+  }
+
+  if (summary.result === "won") {
+    return "结算结果：撑过最终日。"
+  }
+
+  if (summary.result === "lost") {
+    return "结算结果：避难所失守。"
+  }
+
+  if (summary.result === "advanced") {
+    return `结算结果：进入第 ${summary.next_day} 天。`
+  }
+
+  return "结算结果：已记录。"
+}
+
+function buildSettlementPanel(runState) {
+  const summary = parseSettlementSummary(runState.last_settlement_summary)
+
+  if (!summary) {
+    return {
+      hasSettlementSummary: false,
+      settlementSummary: null
+    }
+  }
+
+  const upkeep = summary.upkeep || {}
+  const teamPenalty = upkeep.team_penalty || {}
+  const penaltyText = teamPenalty.applied
+    ? `维护不足：全员疲劳 ${format.formatChange(teamPenalty.fatigue_change)} / 健康 ${format.formatChange(teamPenalty.health_change)}`
+    : "维护完成：无额外队伍惩罚"
+
+  return {
+    hasSettlementSummary: true,
+    settlementSummary: {
+      title: `第 ${summary.settled_day} 天日终结算`,
+      resultText: getSettlementResultText(summary),
+      paidText: `维护支付：${formatResourceParts(upkeep.paid)}`,
+      shortfallText: upkeep.fully_paid ? "维护缺口：无" : `维护缺口：${formatResourceParts(upkeep.shortfall)}`,
+      teamPenaltyText: penaltyText
+    }
+  }
+}
+
+function buildRunState(data) {
+  const runState = normalizeRunState(data)
+  const status = runState.game_status
+  const pendingEvent = normalizePendingEvent(runState)
+
+  return Object.assign({
+    hasRunState: Boolean(data && data.run_state),
+    runState,
+    hasPendingEvent: Boolean(pendingEvent),
+    pendingEvent,
+    runStatusLabel: getRunStatusLabel(status),
+    runStatusClass: getRunStatusClass(status),
+    runResultMessage: getRunResultMessage(status),
+    runEnded: status === "won" || status === "lost"
+  }, buildSettlementPanel(runState))
+}
+
 function buildClearedOfferState() {
   return {
     offerLoading: false,
@@ -170,7 +360,20 @@ function buildUninitializedHomeState(data) {
     initProfile: buildInitProfile(data || {}),
     initIntroText: (data && data.intro_text) || INIT_INTRO_TEXT,
     loading: false,
-    errorMessage: ""
+    errorMessage: "",
+    hasRunState: false,
+    runState: normalizeRunState(),
+    hasPendingEvent: false,
+    pendingEvent: null,
+    eventResolving: false,
+    eventErrorMessage: "",
+    eventResultMessage: "",
+    runStatusLabel: "未开始",
+    runStatusClass: "resource-status resource-status--warning",
+    runResultMessage: "",
+    runEnded: false,
+    hasSettlementSummary: false,
+    settlementSummary: null
   }, buildEmptyResourceState(), buildClearedOfferState())
 }
 
@@ -233,6 +436,19 @@ Page({
     loading: false,
     errorMessage: "",
     resources: format.formatResources(),
+    hasRunState: false,
+    runState: normalizeRunState(),
+    hasPendingEvent: false,
+    pendingEvent: null,
+    eventResolving: false,
+    eventErrorMessage: "",
+    eventResultMessage: "",
+    runStatusLabel: "未开始",
+    runStatusClass: "resource-status resource-status--warning",
+    runResultMessage: "",
+    runEnded: false,
+    hasSettlementSummary: false,
+    settlementSummary: null,
     offerLoading: false,
     offerPurchasing: false,
     offerVisible: false,
@@ -347,10 +563,10 @@ Page({
       .then((res) => {
         if (res.statusCode === 200 && res.data && res.data.initialized) {
           markResetStateChanged()
-          this.setData({
+          this.setData(Object.assign({
             initialized: true,
             initProfile: buildInitProfile(res.data)
-          })
+          }, buildRunState(res.data), buildClearedOfferState()))
           wx.showToast({
             title: "避难所已接入",
             icon: "success"
@@ -387,17 +603,20 @@ Page({
   loadResources() {
     this.setData({
       loading: true,
-      errorMessage: ""
+      errorMessage: "",
+      eventErrorMessage: ""
     })
 
     api.getResources()
       .then((res) => {
         if (res.statusCode === 200 && res.data) {
           const resources = format.formatResources(res.data)
+          const runStateData = buildRunState(res.data)
 
           this.setData(Object.assign({
-            resources
-          }, buildResourceState(resources)))
+            resources,
+            eventResultMessage: runStateData.hasPendingEvent ? "" : this.data.eventResultMessage
+          }, buildResourceState(resources), runStateData))
           return
         }
 
@@ -413,6 +632,60 @@ Page({
       .finally(() => {
         this.setData({
           loading: false
+        })
+      })
+  },
+
+  resolvePendingEvent(event) {
+    if (this.data.eventResolving) {
+      return
+    }
+
+    const choiceId = event.currentTarget.dataset.choiceId
+    if (!choiceId) {
+      return
+    }
+
+    this.setData({
+      eventResolving: true,
+      eventErrorMessage: "",
+      eventResultMessage: ""
+    })
+
+    api.resolveEvent({
+        choice_id: choiceId
+      })
+      .then((res) => {
+        if (res.statusCode === 200 && res.data && res.data.status === "ok") {
+          const result = res.data.result || {}
+          const resultText = result.result_text || res.data.message || "事件已处理。"
+
+          this.setData(Object.assign({
+            hasPendingEvent: false,
+            pendingEvent: null,
+            eventResultMessage: resultText
+          }, buildRunState(res.data)))
+
+          wx.showToast({
+            title: "事件已处理",
+            icon: "success"
+          })
+          this.refreshHome()
+          return
+        }
+
+        this.setData({
+          eventErrorMessage: (res.data && res.data.message) || "事件处理失败。"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          eventErrorMessage: "无法连接后端服务。"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          eventResolving: false
         })
       })
   },

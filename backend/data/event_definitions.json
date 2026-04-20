@@ -1,0 +1,246 @@
+{
+  "events": [
+    {
+      "id": "filter_clog_v1",
+      "title": "滤水器堵塞",
+      "description": "回水管里混着灰沙和铁锈，今天必须临时处理。",
+      "choices": [
+        {
+          "id": "replace_filter",
+          "label": "更换滤芯",
+          "description": "材料 -6，食物 +4。",
+          "result_text": "你们拆掉旧滤芯，换上一组还能用的备件，厨房多保住了一些净水配给。",
+          "effects": {
+            "resource_delta": {
+              "materials": -6,
+              "food": 4
+            }
+          }
+        },
+        {
+          "id": "ration_water",
+          "label": "压缩用水",
+          "description": "食物 -4，电力 +2。",
+          "result_text": "避难所压缩了今日炊事用水，省下的电力转给了过滤泵。",
+          "effects": {
+            "resource_delta": {
+              "food": -4,
+              "power": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "battery_cache_v1",
+      "title": "备用电芯",
+      "description": "仓库夹层里翻出一箱老旧电芯，但外壳需要重新加固。",
+      "choices": [
+        {
+          "id": "salvage_cells",
+          "label": "接入电芯",
+          "description": "电力 +8，材料 -3。",
+          "result_text": "维修台临时加固了电芯外壳，发电间多撑住了一段时间。",
+          "effects": {
+            "resource_delta": {
+              "power": 8,
+              "materials": -3
+            }
+          }
+        },
+        {
+          "id": "strip_parts",
+          "label": "拆成零件",
+          "description": "材料 +5，电力 -3。",
+          "result_text": "你们没有冒险接电，而是拆下还能用的接片和铜线。",
+          "effects": {
+            "resource_delta": {
+              "materials": 5,
+              "power": -3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "caravan_trade_v1",
+      "title": "路过商队",
+      "description": "一支小商队在外门停留，他们只愿意做一次短促交换。",
+      "choices": [
+        {
+          "id": "trade_food",
+          "label": "换取维修料",
+          "description": "食物 -6，材料 +10。",
+          "result_text": "商队收走一袋口粮，留下了螺栓、密封胶和几片干净铁皮。",
+          "effects": {
+            "resource_delta": {
+              "food": -6,
+              "materials": 10
+            }
+          }
+        },
+        {
+          "id": "trade_power",
+          "label": "借用充电架",
+          "description": "电力 +6，材料 -4。",
+          "result_text": "商队的移动充电架接入了片刻，代价是几件修补工具。",
+          "effects": {
+            "resource_delta": {
+              "power": 6,
+              "materials": -4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "collapsed_tunnel_v1",
+      "title": "塌陷通道",
+      "description": "旧通道传来金属回声，{target}认为里面还有可回收物资。",
+      "requires_survivor": true,
+      "target_selector": "random_active",
+      "choices": [
+        {
+          "id": "send_target",
+          "label": "让{target}探路",
+          "description": "材料 +12，{target}重伤停工。",
+          "result_text": "{target}带回了成捆材料，但撤出时被碎石砸伤，只能停工恢复。",
+          "effects": {
+            "resource_delta": {
+              "materials": 12
+            },
+            "survivor": {
+              "survivor_status": "injured",
+              "recovery_days": 2,
+              "fatigue_delta": 12,
+              "health_delta": -10
+            }
+          }
+        },
+        {
+          "id": "seal_route",
+          "label": "封住通道",
+          "description": "材料 -4，电力 +1。",
+          "result_text": "你们放弃深入，只用少量材料封住裂口，减少了通风负担。",
+          "effects": {
+            "resource_delta": {
+              "materials": -4,
+              "power": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "sickbay_shortage_v1",
+      "title": "医疗舱短缺",
+      "description": "{target}的伤势反复，医疗舱只剩一组基础耗材。",
+      "requires_survivor": true,
+      "target_selector": "lowest_health_active",
+      "choices": [
+        {
+          "id": "use_supplies",
+          "label": "立刻处理",
+          "description": "食物 -5，电力 -2。",
+          "result_text": "医疗舱亮了一整晚，{target}暂时稳住，没有被迫停工。",
+          "effects": {
+            "resource_delta": {
+              "food": -5,
+              "power": -2
+            }
+          }
+        },
+        {
+          "id": "delay_treatment",
+          "label": "延后处理",
+          "description": "{target}重伤停工 1 天。",
+          "result_text": "医疗耗材被省下了，但{target}的伤势恶化，只能暂时停工。",
+          "effects": {
+            "survivor": {
+              "survivor_status": "injured",
+              "recovery_days": 1,
+              "fatigue_delta": 8,
+              "health_delta": -6
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "gate_argument_v1",
+      "title": "边门争执",
+      "description": "{target}已经撑得太久，要求今天退出危险排班。",
+      "requires_survivor": true,
+      "requires_poor_condition": true,
+      "target_selector": "highest_fatigue_active",
+      "choices": [
+        {
+          "id": "let_rest",
+          "label": "补一份口粮",
+          "description": "食物 -5，避免离队。",
+          "result_text": "你给{target}补了一份热食，让争执暂时平息。",
+          "effects": {
+            "resource_delta": {
+              "food": -5
+            }
+          }
+        },
+        {
+          "id": "push_shift",
+          "label": "继续压排班",
+          "description": "材料 +5，{target}离队。",
+          "result_text": "{target}完成最后一次整理，把工具牌放回门边后离开了避难所。",
+          "effects": {
+            "resource_delta": {
+              "materials": 5
+            },
+            "survivor": {
+              "survivor_status": "left",
+              "leave_reason": "长期高压排班后离队",
+              "fatigue_delta": 10,
+              "health_delta": -4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "escort_request_v1",
+      "title": "护送请求",
+      "description": "外门有人愿意交出一批电缆，条件是让{target}护送他们离开封锁线。",
+      "requires_survivor": true,
+      "requires_poor_condition": true,
+      "target_selector": "lowest_health_active",
+      "choices": [
+        {
+          "id": "refuse_escort",
+          "label": "拒绝护送",
+          "description": "电力 -3，保住人员。",
+          "result_text": "外门重新关闭。对方带走了电缆，你们只保住了现有人手。",
+          "effects": {
+            "resource_delta": {
+              "power": -3
+            }
+          }
+        },
+        {
+          "id": "accept_escort",
+          "label": "接受护送",
+          "description": "电力 +7，{target}离队。",
+          "result_text": "{target}护送对方穿过封锁线，按约定没有再回到避难所。",
+          "effects": {
+            "resource_delta": {
+              "power": 7
+            },
+            "survivor": {
+              "survivor_status": "left",
+              "leave_reason": "执行外部护送后离队",
+              "fatigue_delta": 6,
+              "health_delta": -3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
