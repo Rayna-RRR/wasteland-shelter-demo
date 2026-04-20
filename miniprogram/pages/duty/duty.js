@@ -172,6 +172,70 @@ function buildStateDeltaRows(result, survivor, previousSurvivor) {
   })
 }
 
+function formatResourceParts(values) {
+  const data = values || {}
+  const rows = [
+    { label: "食物", value: data.food || 0 },
+    { label: "电力", value: data.power || 0 },
+    { label: "材料", value: data.materials || 0 }
+  ]
+
+  return rows.map((item) => {
+    return `${item.label} ${item.value}`
+  }).join(" / ")
+}
+
+function buildConsequencePanel(result, survivor) {
+  const consequence = result.survivor_consequence || null
+  const status = (consequence && consequence.status) || survivor.status || "active"
+
+  if (status === "left") {
+    const leaveReason = (
+      (consequence && consequence.leave_reason) ||
+      survivor.leave_reason ||
+      "已离开避难所"
+    )
+
+    return {
+      hasConsequence: true,
+      consequenceClass: "result-alert result-alert--danger",
+      consequenceTitle: "离队后果",
+      consequenceMessage: (
+        (consequence && consequence.message) ||
+        `${survivor.name || "幸存者"}已离队。`
+      ),
+      consequenceDetail: `原因：${leaveReason}`
+    }
+  }
+
+  if (status === "injured") {
+    const availableOnDay = (
+      (consequence && consequence.available_on_day) ||
+      survivor.available_on_day ||
+      "--"
+    )
+
+    return {
+      hasConsequence: true,
+      consequenceClass: "result-alert result-alert--warning",
+      consequenceTitle: "重伤停工",
+      consequenceMessage: (
+        (consequence && consequence.message) ||
+        `${survivor.name || "幸存者"}需要暂停值勤。`
+      ),
+      consequenceDetail: `恢复日：第 ${availableOnDay} 天`
+    }
+  }
+
+  return {
+    hasConsequence: false,
+    consequenceClass: "",
+    consequenceTitle: "",
+    consequenceMessage: "",
+    consequenceDetail: ""
+  }
+}
+
 function buildResultSignalText(resourceDeltaRows, stateDeltaRows) {
   const hasResourceGain = resourceDeltaRows.some((item) => item.tone === "gain")
   const hasResourceLoss = resourceDeltaRows.some((item) => item.tone === "loss")
@@ -311,13 +375,70 @@ function getRestErrorMessage(res) {
   return message || "休整失败"
 }
 
-function buildResultPanel(result, survivor, dutyLabel, previousSurvivor) {
+function buildDayTransitionRows(dayTransition) {
+  if (!dayTransition) {
+    return []
+  }
+
+  const rows = [
+    {
+      label: "结算日",
+      value: `第 ${dayTransition.settled_day || "--"} 天`
+    }
+  ]
+  const upkeep = dayTransition.upkeep || {}
+
+  if (upkeep.paid) {
+    rows.push({
+      label: "维护支付",
+      value: formatResourceParts(upkeep.paid)
+    })
+  }
+
+  if (upkeep.shortfall) {
+    rows.push({
+      label: "维护缺口",
+      value: upkeep.fully_paid ? "无" : formatResourceParts(upkeep.shortfall)
+    })
+  }
+
+  const teamPenalty = upkeep.team_penalty || {}
+  if (teamPenalty.applied) {
+    rows.push({
+      label: "队伍影响",
+      value: (
+        `全员疲劳 ${format.formatChange(teamPenalty.fatigue_change)} / ` +
+        `健康 ${format.formatChange(teamPenalty.health_change)}`
+      )
+    })
+  }
+
+  return rows
+}
+
+function buildDayTransitionPanel(dayTransition) {
+  if (!dayTransition) {
+    return {
+      hasDayTransition: false,
+      dayTransitionMessage: "",
+      dayTransitionRows: []
+    }
+  }
+
+  return {
+    hasDayTransition: true,
+    dayTransitionMessage: getDayTransitionMessage(dayTransition),
+    dayTransitionRows: buildDayTransitionRows(dayTransition)
+  }
+}
+
+function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTransition) {
   const survivorState = formatState(survivor.fatigue, survivor.health)
   const profile = normalizeSurvivorProfile(survivor, survivorState.stateTag)
   const resourceDeltaRows = buildResourceDeltaRows(result)
   const stateDeltaRows = buildStateDeltaRows(result, survivor, previousSurvivor)
 
-  return {
+  return Object.assign({
     survivorName: survivor.name || "幸存者",
     dutyLabel,
     resultSignalText: buildResultSignalText(resourceDeltaRows, stateDeltaRows),
@@ -339,8 +460,8 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor) {
     fatigueClass: survivorState.fatigueClass,
     healthClass: survivorState.healthClass,
     stateTag: profile.currentStateTag || survivorState.stateTag,
-    stateTagClass: survivorState.stateTagClass
-  }
+    stateTagClass: getStatusTagClass(survivor.status, survivorState.stateTagClass)
+  }, buildConsequencePanel(result, survivor), buildDayTransitionPanel(dayTransition))
 }
 
 function normalizeRunState(data) {
@@ -626,7 +747,8 @@ Page({
               result,
               survivor,
               format.getDutyLabel(dutyType),
-              previousSurvivor
+              previousSurvivor,
+              res.data.day_transition
             )
           }, buildRunState(res.data)))
 
@@ -767,7 +889,8 @@ Page({
               result,
               survivor,
               "休整",
-              previousSurvivor
+              previousSurvivor,
+              res.data.day_transition
             )
           }, buildRunState(res.data)))
 

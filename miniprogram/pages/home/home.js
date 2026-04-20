@@ -274,6 +274,135 @@ function getRunResultMessage(status) {
   return ""
 }
 
+function getRunStatusHelper(status) {
+  if (status === "won") {
+    return "最终威胁已解除"
+  }
+
+  if (status === "lost") {
+    return "资源归零后失守"
+  }
+
+  if (status === "active") {
+    return "本轮仍在进行"
+  }
+
+  return "等待开局"
+}
+
+function getRunOverviewLead(status, pendingEvent) {
+  if (pendingEvent) {
+    return "今日事件优先处理"
+  }
+
+  if (status === "won") {
+    return "本轮胜利"
+  }
+
+  if (status === "lost") {
+    return "本轮失败"
+  }
+
+  return "当前局概览"
+}
+
+function getRunOverviewNote(runState, status, pendingEvent) {
+  if (pendingEvent) {
+    return "今日事件会暂时阻挡招募和值勤，请先完成选择。"
+  }
+
+  if (status === "won") {
+    return "避难所已经撑过最终威胁，可以查看日志回顾本轮。"
+  }
+
+  if (status === "lost") {
+    return "本轮已经结束，可以查看日志定位资源断点。"
+  }
+
+  const actionsLeft = Number(runState.actions_left)
+  if (!isNaN(actionsLeft) && actionsLeft > 0) {
+    return `还能执行 ${actionsLeft} 次行动，可继续招募或安排值勤。`
+  }
+
+  return "今日行动已耗尽，等待日终状态同步。"
+}
+
+function buildHomeSubtitle(runState, status, pendingEvent) {
+  if (!runState || runState.current_day === "--") {
+    return "资源总览 / 值勤待命 / 补给协议"
+  }
+
+  if (pendingEvent) {
+    return `第 ${runState.current_day} 天 · 今日事件待处理`
+  }
+
+  if (status === "won") {
+    return `第 ${runState.current_day} 天 · 本轮胜利`
+  }
+
+  if (status === "lost") {
+    return `第 ${runState.current_day} 天 · 本轮失败`
+  }
+
+  return (
+    `第 ${runState.current_day} 天 · ` +
+    `剩余行动 ${runState.actions_left}/${runState.actions_per_day} · ` +
+    `威胁 ${runState.threat_days_left} 天`
+  )
+}
+
+function getRunOverviewClass(status, pendingEvent) {
+  if (status === "lost") {
+    return "run-overview-card run-overview-card--critical"
+  }
+
+  if (pendingEvent) {
+    return "run-overview-card run-overview-card--warning"
+  }
+
+  return "run-overview-card run-overview-card--normal"
+}
+
+function buildRunOverviewItems(runState, status) {
+  return [
+    {
+      label: "当前天数",
+      value: `第 ${runState.current_day} 天`,
+      helper: `共 ${runState.total_days} 天`,
+      itemClass: "run-overview-item"
+    },
+    {
+      label: "剩余行动",
+      value: `${runState.actions_left} / ${runState.actions_per_day}`,
+      helper: "今日可用",
+      itemClass: "run-overview-item"
+    },
+    {
+      label: "威胁倒计时",
+      value: `${runState.threat_days_left} 天`,
+      helper: "撑到归零前",
+      itemClass: "run-overview-item"
+    },
+    {
+      label: "本轮状态",
+      value: getRunStatusLabel(status),
+      helper: getRunStatusHelper(status),
+      itemClass: "run-overview-item"
+    }
+  ]
+}
+
+function buildRunOverview(runState, status, pendingEvent) {
+  return {
+    homeSubtitle: buildHomeSubtitle(runState, status, pendingEvent),
+    runOverviewClass: getRunOverviewClass(status, pendingEvent),
+    runOverviewLead: getRunOverviewLead(status, pendingEvent),
+    runOverviewTitle: `第 ${runState.current_day} / ${runState.total_days} 天`,
+    runOverviewNote: getRunOverviewNote(runState, status, pendingEvent),
+    runOverviewItems: buildRunOverviewItems(runState, status)
+  }
+}
+
 function getSettlementResultText(summary) {
   if (!summary) {
     return ""
@@ -336,7 +465,7 @@ function buildRunState(data) {
     runStatusClass: getRunStatusClass(status),
     runResultMessage: getRunResultMessage(status),
     runEnded: status === "won" || status === "lost"
-  }, buildSettlementPanel(runState))
+  }, buildRunOverview(runState, status, pendingEvent), buildSettlementPanel(runState))
 }
 
 function buildClearedOfferState() {
@@ -372,6 +501,12 @@ function buildUninitializedHomeState(data) {
     runStatusClass: "resource-status resource-status--warning",
     runResultMessage: "",
     runEnded: false,
+    homeSubtitle: "资源总览 / 值勤待命 / 补给协议",
+    runOverviewClass: "run-overview-card run-overview-card--warning",
+    runOverviewLead: "等待开局",
+    runOverviewTitle: "第 -- / -- 天",
+    runOverviewNote: "完成首次接入后会显示当前局状态。",
+    runOverviewItems: buildRunOverviewItems(normalizeRunState(), "inactive"),
     hasSettlementSummary: false,
     settlementSummary: null
   }, buildEmptyResourceState(), buildClearedOfferState())
@@ -447,6 +582,12 @@ Page({
     runStatusClass: "resource-status resource-status--warning",
     runResultMessage: "",
     runEnded: false,
+    homeSubtitle: "资源总览 / 值勤待命 / 补给协议",
+    runOverviewClass: "run-overview-card run-overview-card--warning",
+    runOverviewLead: "等待开局",
+    runOverviewTitle: "第 -- / -- 天",
+    runOverviewNote: "完成首次接入后会显示当前局状态。",
+    runOverviewItems: buildRunOverviewItems(normalizeRunState(), "inactive"),
     hasSettlementSummary: false,
     settlementSummary: null,
     offerLoading: false,

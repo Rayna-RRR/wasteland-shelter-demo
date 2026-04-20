@@ -584,6 +584,52 @@
   line-height: 1.55;
 }
 
+.result-alert {
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid rgba(255, 87, 34, 0.36);
+  border-left: 6rpx solid var(--hazard-orange);
+  border-radius: 8rpx;
+  background: rgba(139, 58, 58, 0.18);
+}
+
+.result-alert--danger {
+  border-color: rgba(255, 106, 106, 0.48);
+  border-left-color: #ff6a6a;
+  background: rgba(139, 58, 58, 0.24);
+}
+
+.result-alert--warning {
+  border-color: rgba(255, 87, 34, 0.40);
+  border-left-color: var(--hazard-orange);
+}
+
+.result-alert-title {
+  display: block;
+  color: var(--hazard-orange);
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.result-alert--danger .result-alert-title {
+  color: #ff8a80;
+}
+
+.result-alert-copy,
+.result-alert-detail {
+  display: block;
+  margin-top: 8rpx;
+  color: rgba(211, 211, 211, 0.86);
+  font-size: 25rpx;
+  line-height: 1.45;
+}
+
+.result-alert-detail {
+  color: var(--desert-yellow);
+  font-weight: 700;
+}
+
 .result-feedback-panel {
   margin-top: 18rpx;
   padding: 18rpx;
@@ -667,6 +713,69 @@
   color: rgba(155, 146, 134, 0.78);
   font-size: 24rpx;
   line-height: 1.45;
+}
+
+.day-transition-card {
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.32);
+  border-left: 6rpx solid var(--desert-yellow);
+  border-radius: 8rpx;
+  background:
+    linear-gradient(135deg, rgba(193, 154, 107, 0.12), transparent 54%),
+    rgba(0, 0, 0, 0.22);
+}
+
+.day-transition-kicker {
+  display: block;
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.day-transition-title {
+  display: block;
+  margin-top: 6rpx;
+  color: var(--base-text);
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.day-transition-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.day-transition-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14rpx;
+  padding: 12rpx 14rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.20);
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.day-transition-label {
+  flex: 0 0 120rpx;
+  color: var(--muted-text);
+  font-size: 22rpx;
+  line-height: 1.35;
+}
+
+.day-transition-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--desert-yellow);
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .offer-hint-card {

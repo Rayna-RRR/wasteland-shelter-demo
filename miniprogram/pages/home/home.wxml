@@ -61,64 +61,7 @@
   <view class="header home-header">
     <text class="header-kicker">避难所控制台</text>
     <text class="title">废土避难所</text>
-    <text class="subtitle">资源总览 / 值勤待命 / 补给协议</text>
-  </view>
-
-  <view class="section commander-section">
-    <view class="section-heading">
-      <view>
-        <text class="section-kicker">避难所档案</text>
-        <text class="section-title">当前指挥</text>
-      </view>
-    </view>
-    <view class="commander-grid">
-      <view class="commander-chip">
-        <text class="commander-label">避难所代号</text>
-        <text class="commander-value">{{initProfile.shelter_code}}</text>
-      </view>
-      <view class="commander-chip">
-        <text class="commander-label">指挥官</text>
-        <text class="commander-value">{{initProfile.commander_name}}</text>
-      </view>
-      <view class="commander-chip commander-chip--wide">
-        <text class="commander-label">当前难度</text>
-        <text class="commander-value">{{initProfile.difficulty}}</text>
-      </view>
-    </view>
-  </view>
-
-  <view wx:if="{{hasRunState}}" class="section commander-section">
-    <view class="section-heading">
-      <view>
-        <text class="section-kicker">当前局</text>
-        <text class="section-title">今日行动</text>
-      </view>
-      <text class="{{runStatusClass}}">{{runStatusLabel}}</text>
-    </view>
-    <view class="commander-grid">
-      <view class="commander-chip">
-        <text class="commander-label">当前天数</text>
-        <text class="commander-value">第 {{runState.current_day}} / {{runState.total_days}} 天</text>
-      </view>
-      <view class="commander-chip">
-        <text class="commander-label">剩余行动</text>
-        <text class="commander-value">{{runState.actions_left}} / {{runState.actions_per_day}}</text>
-      </view>
-      <view class="commander-chip commander-chip--wide">
-        <text class="commander-label">威胁倒计时</text>
-        <text class="commander-value">{{runState.threat_days_left}} 天</text>
-      </view>
-    </view>
-    <view wx:if="{{runResultMessage}}" class="message-card">
-      <text class="muted">{{runResultMessage}}</text>
-    </view>
-    <view wx:if="{{hasSettlementSummary}}" class="message-card">
-      <text class="muted">{{settlementSummary.title}}</text>
-      <text class="muted">{{settlementSummary.resultText}}</text>
-      <text class="muted">{{settlementSummary.paidText}}</text>
-      <text class="muted">{{settlementSummary.shortfallText}}</text>
-      <text class="muted">{{settlementSummary.teamPenaltyText}}</text>
-    </view>
+    <text class="subtitle">{{homeSubtitle}}</text>
   </view>
 
   <view wx:if="{{hasPendingEvent || eventResultMessage || eventErrorMessage}}" class="section event-section">
@@ -130,6 +73,10 @@
       <text wx:if="{{hasPendingEvent}}" class="resource-status resource-status--warning">需选择</text>
     </view>
     <view wx:if="{{hasPendingEvent}}" class="event-card">
+      <view class="event-topline">
+        <text class="event-day-label">第 {{pendingEvent.day}} 天事件</text>
+        <text class="event-priority-label">先处理</text>
+      </view>
       <text class="event-title">{{pendingEvent.title}}</text>
       <text class="event-copy">{{pendingEvent.description}}</text>
       <view class="event-choice-list">
@@ -153,6 +100,66 @@
     </view>
     <view wx:if="{{eventResultMessage}}" class="message-card">
       <text class="muted">{{eventResultMessage}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{hasRunState}}" class="section run-overview-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">当前局</text>
+        <text class="section-title">运行概览</text>
+      </view>
+      <text class="{{runStatusClass}}">{{runStatusLabel}}</text>
+    </view>
+    <view class="{{runOverviewClass}}">
+      <view class="run-overview-main">
+        <view>
+          <text class="run-overview-kicker">{{runOverviewLead}}</text>
+          <text class="run-overview-title">{{runOverviewTitle}}</text>
+        </view>
+        <text class="{{runStatusClass}}">{{runStatusLabel}}</text>
+      </view>
+      <view class="run-overview-grid">
+        <view wx:for="{{runOverviewItems}}" wx:key="label" class="{{item.itemClass}}">
+          <text class="run-overview-label">{{item.label}}</text>
+          <text class="run-overview-value">{{item.value}}</text>
+          <text class="run-overview-helper">{{item.helper}}</text>
+        </view>
+      </view>
+      <text class="run-overview-note">{{runOverviewNote}}</text>
+    </view>
+    <view wx:if="{{runResultMessage}}" class="message-card">
+      <text class="muted">{{runResultMessage}}</text>
+    </view>
+    <view wx:if="{{hasSettlementSummary}}" class="message-card settlement-message-card">
+      <text class="settlement-title">{{settlementSummary.title}}</text>
+      <text class="muted">{{settlementSummary.resultText}}</text>
+      <text class="muted">{{settlementSummary.paidText}}</text>
+      <text class="muted">{{settlementSummary.shortfallText}}</text>
+      <text class="muted">{{settlementSummary.teamPenaltyText}}</text>
+    </view>
+  </view>
+
+  <view class="section commander-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">避难所档案</text>
+        <text class="section-title">当前指挥</text>
+      </view>
+    </view>
+    <view class="commander-grid">
+      <view class="commander-chip">
+        <text class="commander-label">避难所代号</text>
+        <text class="commander-value">{{initProfile.shelter_code}}</text>
+      </view>
+      <view class="commander-chip">
+        <text class="commander-label">指挥官</text>
+        <text class="commander-value">{{initProfile.commander_name}}</text>
+      </view>
+      <view class="commander-chip commander-chip--wide">
+        <text class="commander-label">当前难度</text>
+        <text class="commander-value">{{initProfile.difficulty}}</text>
+      </view>
     </view>
   </view>
 

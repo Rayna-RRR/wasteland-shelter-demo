@@ -42,6 +42,16 @@ function sortLogsNewestFirst(logs) {
   })
 }
 
+function decorateLatestLogs(logs) {
+  return logs.map((log, index) => {
+    return Object.assign({}, log, {
+      isLatest: index === 0,
+      latestText: index === 0 ? "最新" : "",
+      logCardClass: `${log.logCardClass}${index === 0 ? " log-card--latest" : ""}`
+    })
+  })
+}
+
 function buildExpandableLogState(section, logs, expanded) {
   const hiddenCount = Math.max(logs.length - DEFAULT_VISIBLE_LOG_COUNT, 0)
   const visibleLogs = expanded ? logs : logs.slice(0, DEFAULT_VISIBLE_LOG_COUNT)
@@ -55,13 +65,57 @@ function buildExpandableLogState(section, logs, expanded) {
   }
 }
 
+function buildLogTimeParts(createdAt) {
+  const rawText = String(createdAt || "").replace("T", " ")
+  const parts = rawText.split(" ")
+  const dateText = parts[0] || "--"
+  const timeText = parts[1] || rawText || "--"
+
+  return {
+    dayLabel: `记录日 ${dateText}`,
+    timeLabel: timeText
+  }
+}
+
+function buildRecordText(row) {
+  return row.id ? `记录 #${row.id}` : "记录 #--"
+}
+
+function getChangeClass(value) {
+  const numberValue = Number(value || 0)
+
+  if (numberValue > 0) {
+    return "resource-change resource-change--gain"
+  }
+
+  if (numberValue < 0) {
+    return "resource-change resource-change--loss"
+  }
+
+  return "resource-change"
+}
+
+function buildResourceChangeRows(row) {
+  return [
+    { label: "食物", value: row.food_change },
+    { label: "电力", value: row.power_change },
+    { label: "材料", value: row.materials_change }
+  ].map((item) => {
+    return {
+      label: item.label,
+      valueText: format.formatChange(item.value),
+      changeClass: getChangeClass(item.value)
+    }
+  })
+}
+
 function formatGachaLog(row) {
   const rarityKey = getRarityKey(row.rarity)
   const duplicate = Boolean(row.duplicate)
   const compensation = row.compensation || {}
   const compensationAmount = compensation.amount || 0
 
-  return {
+  return Object.assign({
     id: row.id,
     survivor_name: row.survivor_name,
     rarity: row.rarity,
@@ -73,7 +127,9 @@ function formatGachaLog(row) {
     tagClass: `log-tag log-tag--rarity-${rarityKey}`,
     markerText: duplicate ? "重复补偿" : "招募记录",
     rarityText: row.rarity || "R"
-  }
+  }, buildLogTimeParts(row.created_at), {
+    recordText: buildRecordText(row)
+  })
 }
 
 function getOfferOutcomeText(eventType) {
@@ -106,7 +162,7 @@ function formatOfferActionCount(actionCount) {
 }
 
 function formatDutyLog(row) {
-  return {
+  return Object.assign({
     id: row.id,
     survivor_name: row.survivor_name,
     duty_type: row.duty_type,
@@ -118,12 +174,15 @@ function formatDutyLog(row) {
     logCardClass: "log-card log-card--duty",
     tagClass: "log-tag log-tag--duty",
     markerText: "值勤行动",
+    resourceChanges: buildResourceChangeRows(row),
     created_at: row.created_at
-  }
+  }, buildLogTimeParts(row.created_at), {
+    recordText: buildRecordText(row)
+  })
 }
 
 function formatOfferLog(row) {
-  return {
+  return Object.assign({
     id: row.id,
     action_type: format.getOfferEventLabel(row.event_type),
     event_type: row.event_type,
@@ -139,7 +198,9 @@ function formatOfferLog(row) {
     tagClass: getOfferEventClass(row.event_type),
     markerText: "补给协议",
     created_at: row.created_at
-  }
+  }, buildLogTimeParts(row.created_at), {
+    recordText: buildRecordText(row)
+  })
 }
 
 Page({
@@ -249,7 +310,9 @@ Page({
     api.getGachaLogs()
       .then((res) => {
         if (res.statusCode === 200 && Array.isArray(res.data)) {
-          const logs = sortLogsNewestFirst(res.data.map(formatGachaLog))
+          const logs = decorateLatestLogs(sortLogsNewestFirst(
+            res.data.map(formatGachaLog)
+          ))
 
           this.setData(buildExpandableLogState(
             "gacha",
@@ -284,7 +347,9 @@ Page({
     api.getDutyLogs()
       .then((res) => {
         if (res.statusCode === 200 && Array.isArray(res.data)) {
-          const logs = sortLogsNewestFirst(res.data.map(formatDutyLog))
+          const logs = decorateLatestLogs(sortLogsNewestFirst(
+            res.data.map(formatDutyLog)
+          ))
 
           this.setData(buildExpandableLogState(
             "duty",
@@ -319,7 +384,9 @@ Page({
     api.getEmergencyOfferLogs()
       .then((res) => {
         if (res.statusCode === 200 && Array.isArray(res.data)) {
-          const logs = sortLogsNewestFirst(res.data.map(formatOfferLog))
+          const logs = decorateLatestLogs(sortLogsNewestFirst(
+            res.data.map(formatOfferLog)
+          ))
 
           this.setData(buildExpandableLogState(
             "offer",

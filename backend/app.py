@@ -17,18 +17,24 @@ EVENT_DEFINITIONS_PATH = os.path.join(BASE_DIR, "data", "event_definitions.json"
 SURVIVOR_POOL = {
     "SSR": [
         {"name": "周萤", "role": "维修员", "mood": "cold"},
-        {"name": "唐鸦", "role": "守卫", "mood": "alert"}
+        {"name": "唐鸦", "role": "守卫", "mood": "alert"},
+        {"name": "顾砚秋", "role": "采集员", "mood": "steady"},
+        {"name": "周芩", "role": "守卫", "mood": "alert"}
     ],
     "SR": [
         {"name": "林七", "role": "采集员", "mood": "steady"},
-        {"name": "许禾", "role": "医生", "mood": "calm"},
-        {"name": "阿拓", "role": "搜寻员", "mood": "reckless"}
+        {"name": "许禾", "role": "杂务员", "mood": "calm"},
+        {"name": "阿拓", "role": "搜寻员", "mood": "reckless"},
+        {"name": "林雾", "role": "搜寻员", "mood": "cold"},
+        {"name": "姜照晚", "role": "炊事员", "mood": "gentle"}
     ],
     "R": [
         {"name": "小五", "role": "杂务员", "mood": "normal"},
         {"name": "阿琴", "role": "发电员", "mood": "tired"},
         {"name": "老秦", "role": "炊事员", "mood": "gentle"},
-        {"name": "石头", "role": "搬运工", "mood": "silent"}
+        {"name": "石头", "role": "搬运工", "mood": "silent"},
+        {"name": "唐屿宁", "role": "维修员", "mood": "normal"},
+        {"name": "沈见微", "role": "发电员", "mood": "tired"}
     ]
 }
 
@@ -78,10 +84,6 @@ ROLE_PROFILE_MAPPINGS = {
         "work_style": "会把水源、地标和能认路的废弃物一起记下来，回程从不只留一条路。",
         "archive": "荒地风把地图磨得发白，还是能指出下一处可采的暗沟。"
     },
-    "医生": {
-        "work_style": "先稳住伤员呼吸，再决定药该省在哪儿、伤口该先处理哪一处。",
-        "archive": "药箱外壳被酸雨咬出白痕，里面的绷带却总是分格收好。"
-    },
     "搬运工": {
         "work_style": "搬东西前会先试重量和落脚点，很少让队伍在半路返工。",
         "archive": "背过一扇从旧地铁站拆下的铁门，后来那成了避难所的新挡板。"
@@ -103,7 +105,7 @@ MOOD_GACHA_ENTRANCE_LINES = {
     "cold": "先检查门锁，再把行囊靠到墙边。",
     "alert": "进门后扫过通风口和岗哨阴影。",
     "steady": "把路线图摊在桌上，等下一次外勤安排。",
-    "calm": "低声确认伤员名单，像已经在这里待了很久。",
+    "calm": "低声确认值勤名单，像已经在这里待了很久。",
     "reckless": "拍掉袖口尘土，问废墟入口还剩几条路。",
     "normal": "安静领下床位牌，准备从杂活做起。",
     "tired": "摘下防尘面罩，仍把工具攥得很紧。",

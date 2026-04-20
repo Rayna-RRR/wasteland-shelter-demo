@@ -139,6 +139,11 @@
         </view>
       </view>
       <text class="result-copy">{{dutyResult.resultText}}</text>
+      <view wx:if="{{dutyResult.hasConsequence}}" class="{{dutyResult.consequenceClass}}">
+        <text class="result-alert-title">{{dutyResult.consequenceTitle}}</text>
+        <text class="result-alert-copy">{{dutyResult.consequenceMessage}}</text>
+        <text class="result-alert-detail">{{dutyResult.consequenceDetail}}</text>
+      </view>
       <view class="result-feedback-panel">
         <view class="feedback-block">
           <text class="feedback-title">资源变化</text>
@@ -157,6 +162,18 @@
               <text class="delta-label">{{item.label}}</text>
               <text class="{{item.valueClass}}">{{item.valueText}}</text>
             </view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{dutyResult.hasDayTransition}}" class="day-transition-card">
+        <view class="day-transition-head">
+          <text class="day-transition-kicker">今日最后一次行动</text>
+          <text class="day-transition-title">{{dutyResult.dayTransitionMessage}}</text>
+        </view>
+        <view class="day-transition-grid">
+          <view wx:for="{{dutyResult.dayTransitionRows}}" wx:key="label" class="day-transition-row">
+            <text class="day-transition-label">{{item.label}}</text>
+            <text class="day-transition-value">{{item.value}}</text>
           </view>
         </view>
       </view>

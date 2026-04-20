@@ -2,7 +2,7 @@
   <view class="global-noise-overlay"></view>
   <view class="header">
     <text class="title">行动日志</text>
-    <text class="subtitle">记录避难所行动</text>
+    <text class="subtitle">最近招募 / 值勤 / 补给</text>
   </view>
 
   <view class="section log-section log-section--gacha">
@@ -19,10 +19,17 @@
     <block wx:elif="{{gachaLogs.length}}">
       <view wx:for="{{gachaVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
-          <text class="{{item.tagClass}}">{{item.rarityText}}</text>
-          <text class="log-time">{{item.created_at}}</text>
+          <view class="log-tag-row">
+            <text class="{{item.tagClass}}">{{item.rarityText}}</text>
+            <text wx:if="{{item.isLatest}}" class="log-latest-badge">{{item.latestText}}</text>
+          </view>
+          <view class="log-time-stack">
+            <text class="log-day-label">{{item.dayLabel}}</text>
+            <text class="log-time">{{item.timeLabel}}</text>
+          </view>
         </view>
         <text class="log-title">{{item.survivor_name}}</text>
+        <text class="log-meta-line">{{item.recordText}} · {{item.markerText}}</text>
         <view class="log-detail-grid">
           <view class="log-detail">
             <text class="log-detail-label">记录类型</text>
@@ -59,15 +66,20 @@
     <block wx:elif="{{dutyLogs.length}}">
       <view wx:for="{{dutyVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
-          <text class="{{item.tagClass}}">{{item.markerText}}</text>
-          <text class="log-time">{{item.created_at}}</text>
+          <view class="log-tag-row">
+            <text class="{{item.tagClass}}">{{item.markerText}}</text>
+            <text wx:if="{{item.isLatest}}" class="log-latest-badge">{{item.latestText}}</text>
+          </view>
+          <view class="log-time-stack">
+            <text class="log-day-label">{{item.dayLabel}}</text>
+            <text class="log-time">{{item.timeLabel}}</text>
+          </view>
         </view>
         <text class="log-title">{{item.survivor_name}} · {{item.duty_label}}</text>
+        <text class="log-meta-line">{{item.recordText}}</text>
         <text class="log-body">{{item.result_text}}</text>
         <view class="resource-change-row">
-          <text class="resource-change">食物 {{item.food_change_text}}</text>
-          <text class="resource-change">电力 {{item.power_change_text}}</text>
-          <text class="resource-change">材料 {{item.materials_change_text}}</text>
+          <text wx:for="{{item.resourceChanges}}" wx:for-item="change" wx:key="label" class="{{change.changeClass}}">{{change.label}} {{change.valueText}}</text>
         </view>
       </view>
       <button wx:if="{{dutyHasHiddenLogs}}" class="log-toggle-button" hover-class="log-toggle-button--active" bindtap="toggleDutyLogs">{{dutyToggleText}}</button>
@@ -91,10 +103,17 @@
     <block wx:elif="{{offerLogs.length}}">
       <view wx:for="{{offerVisibleLogs}}" wx:key="id" class="{{item.logCardClass}}">
         <view class="log-topline">
-          <text class="{{item.tagClass}}">{{item.action_type}}</text>
-          <text class="log-time">{{item.created_at}}</text>
+          <view class="log-tag-row">
+            <text class="{{item.tagClass}}">{{item.action_type}}</text>
+            <text wx:if="{{item.isLatest}}" class="log-latest-badge">{{item.latestText}}</text>
+          </view>
+          <view class="log-time-stack">
+            <text class="log-day-label">{{item.dayLabel}}</text>
+            <text class="log-time">{{item.timeLabel}}</text>
+          </view>
         </view>
         <text class="log-title">{{item.markerText}}</text>
+        <text class="log-meta-line">{{item.recordText}} · {{item.action_count_text}}</text>
         <view class="offer-record-panel">
           <text class="offer-record-line">压力来源：{{item.trigger_reason}}</text>
           <text class="offer-record-line">触发节点：{{item.action_count_text}}</text>
