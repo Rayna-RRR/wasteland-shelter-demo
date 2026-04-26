@@ -70,16 +70,16 @@
         bindtap="selectSurvivor"
       >
         <text wx:if="{{survivor.selected}}" class="selected-ribbon">已选择</text>
-        <view class="survivor-profile-row character-card-head">
+        <view class="survivor-identity-row">
           <view class="{{survivor.portraitFrameClass}} survivor-portrait--compact">
             <image wx:if="{{survivor.hasPortrait}}" class="survivor-portrait-image" src="{{survivor.portraitPath}}" mode="aspectFill"></image>
             <text wx:else class="{{survivor.portraitFallbackClass}}">{{survivor.portraitFallbackText}}</text>
           </view>
-          <view class="survivor-profile-main">
-            <text class="survivor-name">{{survivor.name}}</text>
-            <view class="survivor-meta-row">
+          <view class="survivor-identity-main">
+            <text class="survivor-display-name">{{survivor.name}}</text>
+            <view class="survivor-tag-row">
               <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
-              <text class="role-pill">{{survivor.role}}</text>
+              <text class="survivor-tag survivor-role-tag">{{survivor.role}}</text>
             </view>
           </view>
           <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
@@ -109,16 +109,16 @@
   <view wx:if="{{selectedSurvivor}}" class="section">
     <text class="section-title">派遣确认</text>
     <view class="{{selectedSurvivor.selectedPanelClass}}">
-      <view class="selected-profile character-card-head">
+      <view class="survivor-identity-row survivor-identity-row--featured">
         <view class="{{selectedSurvivor.portraitFrameClass}} survivor-portrait--featured">
           <image wx:if="{{selectedSurvivor.hasPortrait}}" class="survivor-portrait-image" src="{{selectedSurvivor.portraitPath}}" mode="aspectFill"></image>
           <text wx:else class="{{selectedSurvivor.portraitFallbackClass}}">{{selectedSurvivor.portraitFallbackText}}</text>
         </view>
-        <view class="selected-profile-main">
-          <text class="survivor-name survivor-name--featured">{{selectedSurvivor.name}}</text>
-          <view class="survivor-meta-row">
+        <view class="survivor-identity-main">
+          <text class="survivor-display-name survivor-display-name--featured">{{selectedSurvivor.name}}</text>
+          <view class="survivor-tag-row">
             <text class="{{selectedSurvivor.rarityBadgeClass}}">{{selectedSurvivor.rarity}}</text>
-            <text class="role-pill">{{selectedSurvivor.role}}</text>
+            <text class="survivor-tag survivor-role-tag">{{selectedSurvivor.role}}</text>
           </view>
         </view>
         <text class="{{selectedSurvivor.stateTagClass}}">{{selectedSurvivor.stateTag}}</text>
@@ -191,7 +191,7 @@
 
   <view wx:if="{{dutyResult}}" class="section">
     <text class="section-title">值勤结果</text>
-    <view class="card result-card duty-result-card">
+    <view class="card result-card {{dutyResult.resultCardClass}}">
       <view class="duty-result-head">
         <view class="duty-result-main">
           <view class="{{dutyResult.portraitFrameClass}} survivor-portrait--compact">

@@ -30,6 +30,10 @@ const DUTY_DISPATCH_META = {
   }
 }
 
+function getNextResultAnimationIndex(currentIndex) {
+  return currentIndex === 0 ? 1 : 0
+}
+
 function getStateTag(fatigue, health) {
   if (health <= 30) {
     return "重伤"
@@ -48,11 +52,11 @@ function getStateTag(fatigue, health) {
 
 function getStatusTagClass(status, fallbackClass) {
   if (status === "left") {
-    return "state-tag state-tag--danger"
+    return "survivor-status-tag survivor-status-tag--danger"
   }
 
   if (status === "injured") {
-    return "state-tag state-tag--warning"
+    return "survivor-status-tag survivor-status-tag--warning"
   }
 
   return fallbackClass
@@ -60,18 +64,18 @@ function getStatusTagClass(status, fallbackClass) {
 
 function getStateTagClass(fatigue, health) {
   if (health <= 30) {
-    return "state-tag state-tag--danger"
+    return "survivor-status-tag survivor-status-tag--danger"
   }
 
   if (health <= 60) {
-    return "state-tag state-tag--warning"
+    return "survivor-status-tag survivor-status-tag--warning"
   }
 
   if (fatigue >= 80) {
-    return "state-tag state-tag--warning"
+    return "survivor-status-tag survivor-status-tag--warning"
   }
 
-  return "state-tag state-tag--good"
+  return "survivor-status-tag survivor-status-tag--good"
 }
 
 function getFatigueClass(fatigue) {
@@ -371,8 +375,8 @@ function formatSurvivor(row) {
     name: row.name,
     rarity: getRarityLabel(row.rarity),
     rarityKey,
-    rarityBadgeClass: `rarity-badge rarity-badge--${rarityKey}`,
-    selectedPanelClass: `selected-duty-card selected-duty-card--${rarityKey}${unavailable ? " selected-duty-card--unavailable" : ""}`,
+    rarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
+    selectedPanelClass: `survivor-card survivor-card--featured survivor-card--${rarityKey}${unavailable ? " survivor-card--unavailable" : ""}`,
     role: row.role,
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
@@ -528,6 +532,7 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
   return Object.assign({
     survivorName: survivor.name || "幸存者",
     dutyLabel,
+    resultCardClass: "duty-result-card",
     resultSignalText: buildResultSignalText(resourceDeltaRows, stateDeltaRows),
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
@@ -549,6 +554,12 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
     stateTag: profile.currentStateTag || survivorState.stateTag,
     stateTagClass: getStatusTagClass(survivor.status, survivorState.stateTagClass)
   }, portraitMap.getSurvivorPortrait(survivor), buildConsequencePanel(result, survivor), buildDayTransitionPanel(dayTransition))
+}
+
+function applyResultAnimation(resultPanel, animationIndex) {
+  return Object.assign({}, resultPanel, {
+    resultCardClass: `duty-result-card duty-result-card--enter duty-result-card--enter-${animationIndex}`
+  })
 }
 
 function normalizeRunState(data) {
@@ -650,6 +661,7 @@ Page({
     selectedSurvivor: null,
     dutyTypes: buildDutyOptions(),
     dutyResult: null,
+    resultAnimationIndex: 0,
     offerHintVisible: false,
     offerHintText: "",
     offerHintTriggerLabel: "",
@@ -687,6 +699,7 @@ Page({
       selectedSurvivorId: null,
       selectedSurvivor: null,
       dutyResult: null,
+      resultAnimationIndex: this.data.resultAnimationIndex,
       offerHintVisible: false,
       offerHintText: "",
       offerHintTriggerLabel: "",
@@ -828,15 +841,20 @@ Page({
           const result = res.data.result
           const survivor = res.data.survivor || {}
           const previousSurvivor = this.data.selectedSurvivor
+          const resultAnimationIndex = getNextResultAnimationIndex(this.data.resultAnimationIndex)
 
           this.setData(Object.assign({
-            dutyResult: buildResultPanel(
-              result,
-              survivor,
-              format.getDutyLabel(dutyType),
-              previousSurvivor,
-              res.data.day_transition
-            )
+            dutyResult: applyResultAnimation(
+              buildResultPanel(
+                result,
+                survivor,
+                format.getDutyLabel(dutyType),
+                previousSurvivor,
+                res.data.day_transition
+              ),
+              resultAnimationIndex
+            ),
+            resultAnimationIndex
           }, buildRunState(res.data)))
 
           wx.showToast({
@@ -970,15 +988,20 @@ Page({
           const result = res.data.result
           const survivor = res.data.survivor || {}
           const previousSurvivor = this.data.selectedSurvivor
+          const resultAnimationIndex = getNextResultAnimationIndex(this.data.resultAnimationIndex)
 
           this.setData(Object.assign({
-            dutyResult: buildResultPanel(
-              result,
-              survivor,
-              "休整",
-              previousSurvivor,
-              res.data.day_transition
-            )
+            dutyResult: applyResultAnimation(
+              buildResultPanel(
+                result,
+                survivor,
+                "休整",
+                previousSurvivor,
+                res.data.day_transition
+              ),
+              resultAnimationIndex
+            ),
+            resultAnimationIndex
           }, buildRunState(res.data)))
 
           wx.showToast({

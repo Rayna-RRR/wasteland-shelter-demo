@@ -179,19 +179,27 @@
     </view>
     <block wx:elif="{{survivorPreview.length}}">
       <view wx:for="{{survivorPreview}}" wx:key="id" class="{{item.cardClass}}">
-        <view class="home-survivor-main">
+        <view class="survivor-identity-row survivor-identity-row--home">
           <view class="{{item.portraitFrameClass}} survivor-portrait--home">
             <image wx:if="{{item.hasPortrait}}" class="survivor-portrait-image" src="{{item.portraitPath}}" mode="aspectFill"></image>
             <text wx:else class="{{item.portraitFallbackClass}}">{{item.portraitFallbackText}}</text>
           </view>
-          <view class="home-survivor-copy">
-            <text class="home-survivor-name">{{item.name}}</text>
-            <view class="home-survivor-meta">
-              <text>{{item.rarity}}</text>
-              <text>{{item.role}}</text>
+          <view class="survivor-identity-main">
+            <text class="survivor-display-name survivor-display-name--compact">{{item.name}}</text>
+            <view class="survivor-tag-row">
+              <text class="{{item.rarityBadgeClass}}">{{item.rarity}}</text>
+              <text class="survivor-tag survivor-role-tag">{{item.role}}</text>
             </view>
           </view>
-          <text class="home-survivor-status">{{item.statusLabel}}</text>
+          <text class="{{item.statusClass}}">{{item.statusLabel}}</text>
+        </view>
+        <view wx:if="{{item.traitLabel}}" class="survivor-trait-line">
+          <text class="survivor-trait-label">特质</text>
+          <text class="survivor-trait-value">{{item.traitLabel}}</text>
+        </view>
+        <view class="survivor-vitals-row survivor-vitals-row--compact">
+          <text class="{{item.fatigueClass}}">疲劳 {{item.fatigue}}</text>
+          <text class="{{item.healthClass}}">健康 {{item.health}}</text>
         </view>
       </view>
     </block>

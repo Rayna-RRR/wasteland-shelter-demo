@@ -159,22 +159,61 @@ function buildEmptySurvivorPreviewState() {
   }
 }
 
+function getSurvivorStatusTone(data, unavailable) {
+  if (data.status === "left" || data.health <= 30) {
+    return "danger"
+  }
+
+  if (unavailable || data.status === "injured" || data.health <= 60 || data.fatigue >= 80) {
+    return "warning"
+  }
+
+  return "good"
+}
+
+function getSurvivorVitalClass(type, value) {
+  if (type === "health" && value <= 30) {
+    return "survivor-vital survivor-vital--danger"
+  }
+
+  if ((type === "health" && value <= 60) || (type === "fatigue" && value >= 80)) {
+    return "survivor-vital survivor-vital--warning"
+  }
+
+  return "survivor-vital"
+}
+
 function buildHomeSurvivor(row) {
   const data = row || {}
   const rarityKey = portraitMap.getRarityKey(data.rarity)
   const status = data.status || "active"
+  const fatigue = Number(data.fatigue === undefined ? 0 : data.fatigue)
+  const health = Number(data.health === undefined ? 100 : data.health)
   const unavailable = data.assignable === false || status === "injured" || status === "left"
   const statusLabel = data.status_label || data.current_state_tag || (unavailable ? "不可值勤" : "待命")
+  const statusTone = getSurvivorStatusTone({
+    status,
+    fatigue,
+    health
+  }, unavailable)
 
   return Object.assign({
     id: data.id,
     name: data.name || "幸存者",
     role: data.role || "未登记",
     rarity: data.rarity || "R",
+    rarityKey,
+    rarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
+    traitLabel: data.trait_label || data.personality_label || (data.mood ? format.formatMood(data.mood) : ""),
     statusLabel,
+    statusClass: `survivor-status-tag survivor-status-tag--${statusTone}`,
+    fatigue,
+    health,
+    fatigueClass: getSurvivorVitalClass("fatigue", fatigue),
+    healthClass: getSurvivorVitalClass("health", health),
     cardClass: (
-      `home-survivor-card home-survivor-card--${rarityKey}` +
-      (unavailable ? " home-survivor-card--unavailable" : "")
+      `survivor-card survivor-card--home survivor-card--${rarityKey}` +
+      (unavailable ? " survivor-card--unavailable" : "")
     )
   }, portraitMap.getSurvivorPortrait(data))
 }

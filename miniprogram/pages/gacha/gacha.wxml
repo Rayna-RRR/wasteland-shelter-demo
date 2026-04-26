@@ -79,22 +79,22 @@
       <text class="muted">弱信号传输中，请等待招募舱回传档案...</text>
     </view>
     <view wx:elif="{{showResultCard && survivor}}" class="{{survivor.resultCardClass}}">
-      <view class="recruit-card-head">
+      <view class="recruit-card-head survivor-identity-row survivor-identity-row--recruit">
         <view class="{{survivor.portraitFrameClass}} survivor-portrait--recruit">
           <image wx:if="{{survivor.hasPortrait}}" class="survivor-portrait-image" src="{{survivor.portraitPath}}" mode="aspectFill"></image>
           <text wx:else class="{{survivor.portraitFallbackClass}}">{{survivor.portraitFallbackText}}</text>
         </view>
-        <view class="recruit-identity">
+        <view class="survivor-identity-main">
           <text class="result-signal-title">{{survivor.resultSignalText}}</text>
-          <text class="recruit-name">{{survivor.name}}</text>
-          <view class="recruit-meta-row">
+          <text class="survivor-display-name survivor-display-name--recruit">{{survivor.name}}</text>
+          <view class="survivor-tag-row">
             <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
-            <text class="role-pill">{{survivor.role}}</text>
+            <text class="survivor-tag survivor-role-tag">{{survivor.role}}</text>
           </view>
         </view>
         <view class="recruit-state-stack">
-          <text wx:if="{{survivor.currentStateTag}}" class="result-state-tag">{{survivor.currentStateTag}}</text>
-          <text wx:if="{{survivor.duplicate}}" class="duplicate-badge">重复信号</text>
+          <text wx:if="{{survivor.currentStateTag}}" class="survivor-status-tag survivor-status-tag--good">{{survivor.currentStateTag}}</text>
+          <text wx:if="{{survivor.duplicate}}" class="survivor-status-tag survivor-status-tag--warning duplicate-badge">重复信号</text>
         </view>
       </view>
 

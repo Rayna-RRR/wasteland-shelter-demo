@@ -5,6 +5,10 @@ const portraitMap = require("../../utils/portrait-map")
 const MIN_REVEAL_DURATION = 1600
 const ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
 
+function getNextResultAnimationIndex(currentIndex) {
+  return currentIndex === 0 ? 1 : 0
+}
+
 function getErrorMessage(res, fallback) {
   const message = res && res.data && res.data.message
 
@@ -52,7 +56,7 @@ function buildSurvivorResult(data) {
     name: survivor.name,
     rarity: survivor.rarity,
     rarityKey,
-    rarityBadgeClass: `recruit-rarity recruit-rarity--${rarityKey}`,
+    rarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
     resultCardClass: duplicate ? `card result-card result-card--${rarityKey} result-card--duplicate` : `card result-card result-card--${rarityKey}`,
     resultSignalText: duplicate ? "重复信号回收" : `${survivor.rarity} 信号锁定`,
     role: survivor.role,
@@ -67,6 +71,15 @@ function buildSurvivorResult(data) {
     compensationResourceText: duplicate ? "材料补偿" : "",
     compensationText: duplicate ? `已拥有，转化为材料 +${compensationAmount}` : ""
   }, portraitMap.getSurvivorPortrait(survivor))
+}
+
+function applyResultAnimation(survivor, animationIndex) {
+  const isRareResult = survivor.rarityKey === "ssr"
+  const rareClass = isRareResult ? " result-card--enter-rare" : ""
+
+  return Object.assign({}, survivor, {
+    resultCardClass: `${survivor.resultCardClass} result-card--enter result-card--enter-${animationIndex}${rareClass}`
+  })
 }
 
 function normalizeRunState(data) {
@@ -155,6 +168,7 @@ Page({
     noActionsLeft: false,
     actionBlocked: false,
     actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
+    resultAnimationIndex: 0,
     resetStateVersion: 0
   },
 
@@ -204,6 +218,7 @@ Page({
       noActionsLeft: false,
       actionBlocked: false,
       actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
+      resultAnimationIndex: this.data.resultAnimationIndex,
       resetStateVersion: this.data.resetStateVersion
     }, extraState || {}))
   },
@@ -300,11 +315,14 @@ Page({
         const result = results[0]
 
         if (result.ok) {
+          const resultAnimationIndex = getNextResultAnimationIndex(this.data.resultAnimationIndex)
+
           this.setData(Object.assign({
-            survivor: result.survivor,
+            survivor: applyResultAnimation(result.survivor, resultAnimationIndex),
             isPullAnimating: false,
             revealStatusText: "信号锁定",
-            showResultCard: true
+            showResultCard: true,
+            resultAnimationIndex
           }, buildRunState(result.runStateData)))
           wx.showToast({
             title: result.duplicate ? "获得补偿" : "招募成功",
