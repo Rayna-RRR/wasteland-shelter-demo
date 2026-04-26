@@ -80,6 +80,10 @@
     </view>
     <view wx:elif="{{showResultCard && survivor}}" class="{{survivor.resultCardClass}}">
       <view class="recruit-card-head">
+        <view class="{{survivor.portraitFrameClass}} survivor-portrait--recruit">
+          <image wx:if="{{survivor.hasPortrait}}" class="survivor-portrait-image" src="{{survivor.portraitPath}}" mode="aspectFill"></image>
+          <text wx:else class="{{survivor.portraitFallbackClass}}">{{survivor.portraitFallbackText}}</text>
+        </view>
         <view class="recruit-identity">
           <text class="result-signal-title">{{survivor.resultSignalText}}</text>
           <text class="recruit-name">{{survivor.name}}</text>

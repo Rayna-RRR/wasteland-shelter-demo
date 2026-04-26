@@ -4,4 +4,7 @@ __pycache__/
 .DS_Store
 .env
 node_modules/
-*.logbackend/data/game.db
+*.log
+backend/data/game.db
+backend/data/backups/
+*.db

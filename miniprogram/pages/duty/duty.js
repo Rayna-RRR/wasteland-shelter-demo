@@ -1,5 +1,6 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
+const portraitMap = require("../../utils/portrait-map")
 
 const ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
 
@@ -9,6 +10,25 @@ const RESOURCE_DELTA_META = [
   { key: "materials_change", label: "材料" },
   { key: "premium_currency_change", label: "招募券" }
 ]
+
+const DUTY_DISPATCH_META = {
+  scavenge: {
+    tone: "risk",
+    helperText: "进入废墟搜集物资，收益较高但风险更明显。"
+  },
+  generate_power: {
+    tone: "normal",
+    helperText: "维护发电机组，消耗材料换取电力运转。"
+  },
+  cook: {
+    tone: "normal",
+    helperText: "整理库存与灶台，稳定避难所口粮。"
+  },
+  guard: {
+    tone: "risk",
+    helperText: "承担夜间守卫，资源消耗和状态压力更高。"
+  }
+}
 
 function getStateTag(fatigue, health) {
   if (health <= 30) {
@@ -99,6 +119,68 @@ function buildDeltaClass(baseClass, tone) {
   return `${baseClass} ${baseClass}--${tone}`
 }
 
+function buildDutyOptions() {
+  return format.dutyTypes.map((duty) => {
+    const meta = DUTY_DISPATCH_META[duty.type] || {}
+    const tone = meta.tone || "normal"
+
+    return Object.assign({}, duty, {
+      dispatchTone: tone,
+      helperText: meta.helperText || "执行常规值勤，按当前状态结算收益与消耗。",
+      dispatchCardClass: `dispatch-card dispatch-card--${tone}`
+    })
+  })
+}
+
+function buildRiskHint(survivor) {
+  if (!survivor) {
+    return {
+      riskHintClass: "risk-hint risk-hint--normal",
+      riskHintText: "请选择一名幸存者后再安排值勤。"
+    }
+  }
+
+  if (survivor.unavailable) {
+    return {
+      riskHintClass: "risk-hint risk-hint--danger",
+      riskHintText: survivor.statusNote || "该成员当前不可值勤。"
+    }
+  }
+
+  if (survivor.health <= 30) {
+    return {
+      riskHintClass: "risk-hint risk-hint--danger",
+      riskHintText: "该成员健康很低，继续值勤可能导致重伤停工。"
+    }
+  }
+
+  if (survivor.health <= 60) {
+    return {
+      riskHintClass: "risk-hint risk-hint--warning",
+      riskHintText: "该成员健康较低，建议避免高风险任务。"
+    }
+  }
+
+  if (survivor.fatigue >= 80) {
+    return {
+      riskHintClass: "risk-hint risk-hint--warning",
+      riskHintText: "该成员已明显疲惫，继续值勤可能加重状态。"
+    }
+  }
+
+  if (survivor.fatigue >= 60) {
+    return {
+      riskHintClass: "risk-hint risk-hint--warning",
+      riskHintText: "该成员已有疲劳累积，建议安排低风险任务或休整。"
+    }
+  }
+
+  return {
+    riskHintClass: "risk-hint risk-hint--normal",
+    riskHintText: "当前状态可继续执行普通值勤。"
+  }
+}
+
 function buildResourceDeltaRows(result) {
   return RESOURCE_DELTA_META.map((item) => {
     const value = getNumberValue(result[item.key])
@@ -153,14 +235,14 @@ function buildStateDeltaRows(result, survivor, previousSurvivor) {
     {
       label: "疲劳",
       value: fatigueChange,
-      tone: fatigueChange > 0 ? "loss" : "gain"
+      tone: fatigueChange > 0 ? "loss" : (fatigueChange < 0 ? "gain" : "neutral")
     },
     {
       label: "健康",
       value: healthChange,
-      tone: healthChange > 0 ? "gain" : "loss"
+      tone: healthChange > 0 ? "gain" : (healthChange < 0 ? "loss" : "neutral")
     }
-  ].filter((item) => item.value !== 0).map((item) => {
+  ].map((item) => {
     return {
       label: item.label,
       value: item.value,
@@ -262,11 +344,13 @@ function buildResultSignalText(resourceDeltaRows, stateDeltaRows) {
 }
 
 function normalizeSurvivorProfile(survivor, fallbackStateTag) {
+  const data = survivor || {}
+
   return {
-    traitLabel: survivor.trait_label || survivor.personality_label || (survivor.mood ? format.formatMood(survivor.mood) : ""),
-    workStyleLine: survivor.work_style_line || survivor.personality_label || "",
-    archiveLine: survivor.archive_line || survivor.signature_line || "",
-    currentStateTag: survivor.current_state_tag || fallbackStateTag || ""
+    traitLabel: data.trait_label || data.personality_label || (data.mood ? format.formatMood(data.mood) : ""),
+    workStyleLine: data.work_style_line || data.personality_label || "",
+    archiveLine: data.archive_line || data.signature_line || "",
+    currentStateTag: data.current_state_tag || fallbackStateTag || ""
   }
 }
 
@@ -282,7 +366,7 @@ function formatSurvivor(row) {
   const stateTagClass = getStatusTagClass(status, state.stateTagClass)
   const cardBaseClass = `survivor-card survivor-card--${rarityKey}${unavailable ? " survivor-card--unavailable" : ""}`
 
-  return {
+  const survivorData = Object.assign({
     id: row.id,
     name: row.name,
     rarity: getRarityLabel(row.rarity),
@@ -309,7 +393,9 @@ function formatSurvivor(row) {
     stateTagClass,
     cardBaseClass,
     cardClass: cardBaseClass
-  }
+  }, portraitMap.getSurvivorPortrait(row))
+
+  return Object.assign(survivorData, buildRiskHint(survivorData))
 }
 
 function applySurvivorSelection(survivors, selectedSurvivorId) {
@@ -330,6 +416,7 @@ function applySurvivorSelection(survivors, selectedSurvivorId) {
     const selected = Number(survivor.id) === selectedId
     const cardBaseClass = survivor.cardBaseClass || "survivor-card"
     const markedSurvivor = Object.assign({}, survivor, {
+      selected,
       cardClass: selected ? `${cardBaseClass} survivor-card--selected` : cardBaseClass
     })
 
@@ -461,7 +548,7 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
     healthClass: survivorState.healthClass,
     stateTag: profile.currentStateTag || survivorState.stateTag,
     stateTagClass: getStatusTagClass(survivor.status, survivorState.stateTagClass)
-  }, buildConsequencePanel(result, survivor), buildDayTransitionPanel(dayTransition))
+  }, portraitMap.getSurvivorPortrait(survivor), buildConsequencePanel(result, survivor), buildDayTransitionPanel(dayTransition))
 }
 
 function normalizeRunState(data) {
@@ -561,7 +648,7 @@ Page({
     survivors: [],
     selectedSurvivorId: null,
     selectedSurvivor: null,
-    dutyTypes: format.dutyTypes,
+    dutyTypes: buildDutyOptions(),
     dutyResult: null,
     offerHintVisible: false,
     offerHintText: "",

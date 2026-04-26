@@ -1,5 +1,6 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
+const portraitMap = require("../../utils/portrait-map")
 
 const MIN_REVEAL_DURATION = 1600
 const ACTION_EXHAUSTED_MESSAGE = "今日行动次数已用尽。日推进会在下一阶段接入。"
@@ -47,7 +48,7 @@ function buildSurvivorResult(data) {
   const rarityKey = getRarityKey(survivor.rarity)
   const profile = normalizeSurvivorProfile(survivor)
 
-  return {
+  return Object.assign({
     name: survivor.name,
     rarity: survivor.rarity,
     rarityKey,
@@ -65,7 +66,7 @@ function buildSurvivorResult(data) {
     compensationAmountText: duplicate ? `+${compensationAmount}` : "",
     compensationResourceText: duplicate ? "材料补偿" : "",
     compensationText: duplicate ? `已拥有，转化为材料 +${compensationAmount}` : ""
-  }
+  }, portraitMap.getSurvivorPortrait(survivor))
 }
 
 function normalizeRunState(data) {

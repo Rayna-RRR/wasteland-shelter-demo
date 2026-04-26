@@ -163,6 +163,43 @@
     </view>
   </view>
 
+  <view class="section survivor-preview-section">
+    <view class="section-heading">
+      <view>
+        <text class="section-kicker">幸存者通讯</text>
+        <text class="section-title">当前成员</text>
+      </view>
+      <text class="resource-status resource-status--normal">{{survivorPreview.length}} 名</text>
+    </view>
+    <view wx:if="{{loadingSurvivorPreview}}" class="message-card">
+      <text class="muted">幸存者通讯同步中...</text>
+    </view>
+    <view wx:elif="{{survivorPreviewError}}" class="message-card">
+      <text class="muted">{{survivorPreviewError}}</text>
+    </view>
+    <block wx:elif="{{survivorPreview.length}}">
+      <view wx:for="{{survivorPreview}}" wx:key="id" class="{{item.cardClass}}">
+        <view class="home-survivor-main">
+          <view class="{{item.portraitFrameClass}} survivor-portrait--home">
+            <image wx:if="{{item.hasPortrait}}" class="survivor-portrait-image" src="{{item.portraitPath}}" mode="aspectFill"></image>
+            <text wx:else class="{{item.portraitFallbackClass}}">{{item.portraitFallbackText}}</text>
+          </view>
+          <view class="home-survivor-copy">
+            <text class="home-survivor-name">{{item.name}}</text>
+            <view class="home-survivor-meta">
+              <text>{{item.rarity}}</text>
+              <text>{{item.role}}</text>
+            </view>
+          </view>
+          <text class="home-survivor-status">{{item.statusLabel}}</text>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="message-card">
+      <text class="muted">暂无幸存者，请先前往招募页面。</text>
+    </view>
+  </view>
+
   <view class="section resource-section">
     <view class="section-heading">
       <view>

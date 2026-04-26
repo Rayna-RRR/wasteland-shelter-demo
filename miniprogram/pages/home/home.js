@@ -1,6 +1,7 @@
 const api = require("../../utils/api")
 const format = require("../../utils/format")
 const config = require("../../config")
+const portraitMap = require("../../utils/portrait-map")
 
 const RESOURCE_THRESHOLDS = {
   food: { warning: 75, critical: 60 },
@@ -16,6 +17,7 @@ const RESOURCE_META = [
 ]
 
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
+const HOME_SURVIVOR_PREVIEW_LIMIT = 3
 
 const DIFFICULTY_NOTES = {
   "稳健": "开局配给：食物100 / 电力95 / 材料70 / 招募券45，适合熟悉流程但仍需规划。",
@@ -147,6 +149,34 @@ function buildEmptyResourceState() {
   return Object.assign({
     resources
   }, buildResourceState(resources))
+}
+
+function buildEmptySurvivorPreviewState() {
+  return {
+    loadingSurvivorPreview: false,
+    survivorPreviewError: "",
+    survivorPreview: []
+  }
+}
+
+function buildHomeSurvivor(row) {
+  const data = row || {}
+  const rarityKey = portraitMap.getRarityKey(data.rarity)
+  const status = data.status || "active"
+  const unavailable = data.assignable === false || status === "injured" || status === "left"
+  const statusLabel = data.status_label || data.current_state_tag || (unavailable ? "不可值勤" : "待命")
+
+  return Object.assign({
+    id: data.id,
+    name: data.name || "幸存者",
+    role: data.role || "未登记",
+    rarity: data.rarity || "R",
+    statusLabel,
+    cardClass: (
+      `home-survivor-card home-survivor-card--${rarityKey}` +
+      (unavailable ? " home-survivor-card--unavailable" : "")
+    )
+  }, portraitMap.getSurvivorPortrait(data))
 }
 
 function normalizeRunState(data) {
@@ -509,7 +539,7 @@ function buildUninitializedHomeState(data) {
     runOverviewItems: buildRunOverviewItems(normalizeRunState(), "inactive"),
     hasSettlementSummary: false,
     settlementSummary: null
-  }, buildEmptyResourceState(), buildClearedOfferState())
+  }, buildEmptyResourceState(), buildEmptySurvivorPreviewState(), buildClearedOfferState())
 }
 
 function buildInitProfile(data) {
@@ -602,6 +632,9 @@ Page({
     resourceCards: buildResourceCards(format.formatResources()),
     resourcePanelClass: "resource-status resource-status--normal",
     resourceStatusText: "等待同步",
+    loadingSurvivorPreview: false,
+    survivorPreviewError: "",
+    survivorPreview: [],
     isLocalDev: isLocalDevApi(),
     demoModeLoading: false,
     demoModeEnabled: false,
@@ -738,7 +771,41 @@ Page({
     }
 
     this.loadResources()
+    this.loadSurvivorPreview()
     this.loadEmergencyOffer()
+  },
+
+  loadSurvivorPreview() {
+    this.setData({
+      loadingSurvivorPreview: true,
+      survivorPreviewError: ""
+    })
+
+    api.getSurvivors()
+      .then((res) => {
+        if (res.statusCode === 200 && Array.isArray(res.data)) {
+          this.setData({
+            survivorPreview: res.data
+              .slice(0, HOME_SURVIVOR_PREVIEW_LIMIT)
+              .map(buildHomeSurvivor)
+          })
+          return
+        }
+
+        this.setData({
+          survivorPreviewError: "幸存者通讯读取失败"
+        })
+      })
+      .catch(() => {
+        this.setData({
+          survivorPreviewError: "无法连接幸存者通讯"
+        })
+      })
+      .finally(() => {
+        this.setData({
+          loadingSurvivorPreview: false
+        })
+      })
   },
 
   loadResources() {
