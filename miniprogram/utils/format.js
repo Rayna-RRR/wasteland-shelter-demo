@@ -78,6 +78,13 @@ const offerEventLabels = {
 }
 
 const triggerReasonLabels = {
+  resource_food_low: "食物压力",
+  resource_power_low: "电力压力",
+  resource_materials_low: "材料压力",
+  survivor_fatigue_pressure: "疲劳压力",
+  survivor_health_pressure: "健康压力",
+  severe_multi_pressure: "多线压力",
+  action_pressure: "行动压力",
   food_pressure: "食物压力",
   power_shortage: "电力短缺",
   power_pressure: "电力压力",

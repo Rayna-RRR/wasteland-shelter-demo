@@ -254,8 +254,13 @@
         <text class="offer-kicker">战备补给协议</text>
         <text class="offer-badge">协议：{{offer.urgency_label}}</text>
       </view>
-      <text class="offer-title">{{offer.title}}</text>
-      <text class="offer-copy">{{offer.subtitle}}</text>
+      <view class="offer-hero-row">
+        <image wx:if="{{offerImageVisible}}" class="offer-image" src="{{offerImageSrc}}" mode="aspectFill" binderror="handleOfferImageError"></image>
+        <view class="offer-copy-panel">
+          <text class="offer-title">{{offer.title}}</text>
+          <text class="offer-copy">{{offer.subtitle}}</text>
+        </view>
+      </view>
       <view class="offer-signal-grid">
         <view class="offer-signal">
           <text class="offer-signal-label">压力来源</text>

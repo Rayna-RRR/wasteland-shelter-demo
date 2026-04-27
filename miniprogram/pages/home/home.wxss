@@ -621,6 +621,26 @@
   white-space: nowrap;
 }
 
+.offer-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.offer-image {
+  flex: 0 0 148rpx;
+  width: 148rpx;
+  height: 148rpx;
+  border: 1rpx solid rgba(193, 154, 107, 0.32);
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.offer-copy-panel {
+  flex: 1;
+  min-width: 0;
+}
+
 .offer-title {
   display: block;
   color: var(--base-text);

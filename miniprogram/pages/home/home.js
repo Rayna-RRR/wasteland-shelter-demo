@@ -18,6 +18,7 @@ const RESOURCE_META = [
 
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
 const HOME_SURVIVOR_PREVIEW_LIMIT = 3
+const EMERGENCY_SUPPLY_IMAGE = "/assets/images/items/emergency_supply.png"
 
 const DIFFICULTY_NOTES = {
   "稳健": "开局配给：食物100 / 电力95 / 材料70 / 招募券45，适合熟悉流程但仍需规划。",
@@ -546,6 +547,8 @@ function buildClearedOfferState() {
     offerErrorMessage: "",
     offerResultMessage: "",
     offer: null,
+    offerImageSrc: EMERGENCY_SUPPLY_IMAGE,
+    offerImageVisible: true,
     offerTriggerLabel: "",
     offerRewardRows: []
   }
@@ -666,6 +669,8 @@ Page({
     offerErrorMessage: "",
     offerResultMessage: "",
     offer: null,
+    offerImageSrc: EMERGENCY_SUPPLY_IMAGE,
+    offerImageVisible: true,
     offerTriggerLabel: "",
     offerRewardRows: [],
     resourceCards: buildResourceCards(format.formatResources()),
@@ -952,6 +957,7 @@ Page({
           this.setData({
             offerVisible: active,
             offer,
+            offerImageVisible: active ? true : this.data.offerImageVisible,
             offerTriggerLabel: active ? format.getTriggerReasonLabel(res.data.trigger_reason) : "",
             offerRewardRows: active ? buildOfferRewardRows(offer) : [],
             offerResultMessage: active ? "" : this.data.offerResultMessage,
@@ -982,6 +988,12 @@ Page({
           offerLoading: false
         })
       })
+  },
+
+  handleOfferImageError() {
+    this.setData({
+      offerImageVisible: false
+    })
   },
 
   closeEmergencyOffer() {
@@ -1133,6 +1145,7 @@ Page({
           this.setData({
             offerVisible: false,
             offer: null,
+            offerImageVisible: true,
             offerTriggerLabel: "",
             offerRewardRows: [],
             offerResultMessage: "",
