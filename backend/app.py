@@ -226,31 +226,29 @@ FATIGUE_INCREASE_BY_DUTY = {
 HIGH_RISK_DUTIES = ["scavenge", "guard"]
 EMERGENCY_OFFER_FATIGUE_RECOVERY = 10
 EMERGENCY_OFFER_HEALTH_RECOVERY = 3
-RESOURCE_CRITICAL_THRESHOLDS = {
-    "food": 60,
-    "power": 60,
-    "materials": 25
+RESOURCE_LOW_THRESHOLDS = {
+    "food": 45,
+    "power": 45,
+    "materials": 15
 }
-RESOURCE_WARNING_THRESHOLDS = {
-    "food": 75,
-    "power": 75,
-    "materials": 35
-}
-TEAM_STRESS_FATIGUE_THRESHOLD = 70
-TEAM_STRESS_HEALTH_THRESHOLD = 60
-TEAM_CRITICAL_HEALTH_THRESHOLD = 30
-RECENT_DUTY_LOG_LIMIT = 3
-LOW_EFFICIENCY_TRIGGER_COUNT = 2
+TEAM_FATIGUE_PRESSURE_THRESHOLD = 80
+TEAM_HEALTH_PRESSURE_THRESHOLD = 45
+TEAM_POOR_FATIGUE_THRESHOLD = 75
+TEAM_POOR_HEALTH_THRESHOLD = 50
+TEAM_PRESSURE_MIN_SURVIVORS = 2
+RECENT_DUTY_LOG_LIMIT = 4
+ACTION_PRESSURE_MIN_DUTY_COUNT = 6
+LOW_EFFICIENCY_TRIGGER_COUNT = 3
 LOW_EFFICIENCY_TOTAL_CHANGE_THRESHOLD = 2
 EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW = 3
 EMERGENCY_OFFER_SUPPRESS_DAYS_AFTER_CLOSE = 1
 SEVERE_RESOURCE_THRESHOLDS = {
-    "food": 35,
-    "power": 35,
-    "materials": 10
+    "food": 25,
+    "power": 25,
+    "materials": 6
 }
-SEVERE_TEAM_HEALTH_THRESHOLD = 20
-SEVERE_TEAM_FATIGUE_THRESHOLD = 90
+SEVERE_TEAM_HEALTH_THRESHOLD = 25
+SEVERE_TEAM_FATIGUE_THRESHOLD = 92
 
 EMERGENCY_OFFER_ID = "emergency_supply_v1"
 EMERGENCY_OFFER = {
@@ -267,15 +265,51 @@ EMERGENCY_OFFER = {
     }
 }
 EMERGENCY_OFFER_COPY_BY_TRIGGER = {
+    "resource_food_low": {
+        "title": "口粮应急补给",
+        "subtitle": "食物库存已经进入危险区，队伍恢复和日常值勤都会被拖慢。补给室开放一次口粮支援。",
+        "urgency_label": "口粮告急"
+    },
+    "resource_power_low": {
+        "title": "电力应急补给",
+        "subtitle": "电力储备已经低于安全线，照明、过滤和发电排班都在承压。补给室准备了稳定供能包。",
+        "urgency_label": "电力告急"
+    },
+    "resource_materials_low": {
+        "title": "维修材料补给",
+        "subtitle": "材料储备低于维护线，发电、守卫和例行检修都会受影响。补给室建议补足基础耗材。",
+        "urgency_label": "材料告急"
+    },
+    "survivor_fatigue_pressure": {
+        "title": "轮值休整补给",
+        "subtitle": "多名幸存者疲劳过高，继续硬撑会压低后续行动效率。补给室准备了恢复支援。",
+        "urgency_label": "疲劳告急"
+    },
+    "survivor_health_pressure": {
+        "title": "医疗休整补给",
+        "subtitle": "多名幸存者健康偏低，继续出勤会增加受伤和离队风险。补给室准备了恢复支援。",
+        "urgency_label": "健康告急"
+    },
+    "severe_multi_pressure": {
+        "title": "多线应急补给",
+        "subtitle": "资源、队伍或行动压力同时升高，避难所需要一次稳定补给撑过当前轮值。",
+        "urgency_label": "多线压力"
+    },
+    "action_pressure": {
+        "title": "低效行动补给",
+        "subtitle": "连续多次值勤后，最近行动产出偏低。补给室建议先稳住基础盘，再继续排班。",
+        "urgency_label": "效率下滑"
+    },
+    # Legacy trigger names are kept so existing local logs still render clearly.
     "power_shortage": {
-        "title": "低功耗应急补给",
-        "subtitle": "电力已经触底，避难所正在压缩照明和过滤负载。补给室建议先恢复基础供能。",
-        "urgency_label": "断电处置"
+        "title": "电力应急补给",
+        "subtitle": "电力储备已经低于安全线，照明、过滤和发电排班都在承压。补给室准备了稳定供能包。",
+        "urgency_label": "电力告急"
     },
     "power_pressure": {
-        "title": "电力预警补给",
-        "subtitle": "电力储备低于安全线，发电排班正在挤压其他值勤。补给室准备了稳定供能包。",
-        "urgency_label": "电力预警"
+        "title": "电力应急补给",
+        "subtitle": "电力储备已经低于安全线，照明、过滤和发电排班都在承压。补给室准备了稳定供能包。",
+        "urgency_label": "电力告急"
     },
     "food_pressure": {
         "title": "口粮应急补给",
@@ -288,18 +322,18 @@ EMERGENCY_OFFER_COPY_BY_TRIGGER = {
         "urgency_label": "材料告急"
     },
     "combined_resource_pressure": {
-        "title": "综合维持补给",
-        "subtitle": "多项资源同时接近警戒线，避难所需要一次稳定补给来撑过当前轮值。",
+        "title": "多线应急补给",
+        "subtitle": "资源、队伍或行动压力同时升高，避难所需要一次稳定补给撑过当前轮值。",
         "urgency_label": "多线压力"
     },
     "team_state_pressure": {
         "title": "医疗休整补给",
-        "subtitle": "队伍疲劳或伤情已经累积，继续硬撑会压低后续行动效率。补给室准备了恢复支援。",
+        "subtitle": "多名幸存者状态偏低，继续出勤会增加受伤和离队风险。补给室准备了恢复支援。",
         "urgency_label": "队伍告急"
     },
     "low_efficiency_pressure": {
         "title": "低效行动补给",
-        "subtitle": "最近值勤产出偏低，避难所运转效率正在下滑。补给室建议先稳住基础盘。",
+        "subtitle": "连续多次值勤后，最近行动产出偏低。补给室建议先稳住基础盘，再继续排班。",
         "urgency_label": "效率下滑"
     },
     "shelter_pressure": {
@@ -1558,25 +1592,19 @@ def build_duty_result_text(
     return f"{result_sentence} {flavor_sentence}"
 
 
-def get_resource_pressure_reason(player):
-    if player["power"] <= 0:
-        return "power_shortage"
-    if player["food"] <= RESOURCE_CRITICAL_THRESHOLDS["food"]:
-        return "food_pressure"
-    if player["power"] <= RESOURCE_CRITICAL_THRESHOLDS["power"]:
-        return "power_pressure"
-    if player["materials"] <= RESOURCE_CRITICAL_THRESHOLDS["materials"]:
-        return "materials_pressure"
+def get_resource_pressure_reasons(player):
+    reasons = []
+    resource_reason_map = {
+        "food": "resource_food_low",
+        "power": "resource_power_low",
+        "materials": "resource_materials_low"
+    }
 
-    warning_count = 0
-    for key, threshold in RESOURCE_WARNING_THRESHOLDS.items():
-        if player[key] <= threshold:
-            warning_count += 1
+    for resource_name in ("food", "power", "materials"):
+        if player[resource_name] <= RESOURCE_LOW_THRESHOLDS[resource_name]:
+            reasons.append(resource_reason_map[resource_name])
 
-    if warning_count >= 2:
-        return "combined_resource_pressure"
-
-    return None
+    return reasons
 
 
 def get_team_state_pressure_reason(conn):
@@ -1586,34 +1614,45 @@ def get_team_state_pressure_reason(conn):
         SELECT fatigue, health
         FROM survivors
         WHERE owned = 1
-          AND status != 'left'
+          AND status = 'active'
         """
     ).fetchall()
 
     if not rows:
         return None
 
-    stressed_count = 0
-    critical_health_count = 0
+    high_fatigue_count = 0
+    low_health_count = 0
+    poor_fatigue_count = 0
+    poor_health_count = 0
 
     for row in rows:
-        if row["health"] <= TEAM_CRITICAL_HEALTH_THRESHOLD:
-            critical_health_count += 1
-        if (
-            row["fatigue"] >= TEAM_STRESS_FATIGUE_THRESHOLD
-            or row["health"] <= TEAM_STRESS_HEALTH_THRESHOLD
-        ):
-            stressed_count += 1
+        if row["fatigue"] >= TEAM_FATIGUE_PRESSURE_THRESHOLD:
+            high_fatigue_count += 1
+        if row["health"] <= TEAM_HEALTH_PRESSURE_THRESHOLD:
+            low_health_count += 1
+        if row["fatigue"] >= TEAM_POOR_FATIGUE_THRESHOLD:
+            poor_fatigue_count += 1
+        if row["health"] <= TEAM_POOR_HEALTH_THRESHOLD:
+            poor_health_count += 1
 
-    if critical_health_count >= 1:
-        return "team_state_pressure"
-    if len(rows) >= 2 and stressed_count >= 2:
-        return "team_state_pressure"
+    if low_health_count >= TEAM_PRESSURE_MIN_SURVIVORS:
+        return "survivor_health_pressure"
+    if high_fatigue_count >= TEAM_PRESSURE_MIN_SURVIVORS:
+        return "survivor_fatigue_pressure"
+    if len(rows) >= TEAM_PRESSURE_MIN_SURVIVORS:
+        if poor_health_count >= TEAM_PRESSURE_MIN_SURVIVORS:
+            return "survivor_health_pressure"
+        if poor_fatigue_count >= TEAM_PRESSURE_MIN_SURVIVORS:
+            return "survivor_fatigue_pressure"
 
     return None
 
 
-def get_low_efficiency_pressure_reason(conn):
+def get_action_pressure_reason(conn, action_count):
+    if action_count < ACTION_PRESSURE_MIN_DUTY_COUNT:
+        return None
+
     rows = conn.execute(
         """
         SELECT food_change, power_change, materials_change
@@ -1639,9 +1678,29 @@ def get_low_efficiency_pressure_reason(conn):
             low_efficiency_count += 1
 
     if low_efficiency_count >= LOW_EFFICIENCY_TRIGGER_COUNT:
-        return "low_efficiency_pressure"
+        return "action_pressure"
 
     return None
+
+
+def get_emergency_offer_trigger_reason(conn, player, action_count):
+    resource_reasons = get_resource_pressure_reasons(player)
+    team_reason = get_team_state_pressure_reason(conn)
+    action_reason = get_action_pressure_reason(conn, action_count)
+    pressure_count = (
+        len(resource_reasons)
+        + (1 if team_reason else 0)
+        + (1 if action_reason else 0)
+    )
+
+    if pressure_count >= 2:
+        return "severe_multi_pressure"
+    if resource_reasons:
+        return resource_reasons[0]
+    if team_reason:
+        return team_reason
+
+    return action_reason
 
 
 def has_purchased_offer_for_trigger(conn, trigger_reason):
@@ -1662,9 +1721,6 @@ def has_purchased_offer_for_trigger(conn, trigger_reason):
 
 
 def is_severe_emergency_pressure(conn, player):
-    if player["power"] <= 0:
-        return True
-
     for resource_name, threshold in SEVERE_RESOURCE_THRESHOLDS.items():
         if player[resource_name] <= threshold:
             return True
@@ -1700,8 +1756,13 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player, run
         suppressed_until_day > 0
         and current_day <= suppressed_until_day
     )
+    severe_override = (
+        is_severe_emergency_pressure(conn, player)
+        if trigger_reason
+        else False
+    )
     status = {
-        "is_suppressed": day_suppressed,
+        "is_suppressed": day_suppressed and not severe_override,
         "day_suppressed": day_suppressed,
         "suppress_until_day": suppressed_until_day,
         "suppress_remaining_days": max(0, suppressed_until_day - current_day + 1)
@@ -1710,13 +1771,13 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player, run
         "suppress_remaining_actions": 0,
         "suppress_until_action_count": None,
         "closed_action_count": None,
-        "severe_pressure_override": False
+        "severe_pressure_override": severe_override
     }
 
     if not trigger_reason:
         return status
 
-    if day_suppressed:
+    if day_suppressed and not severe_override:
         return status
 
     ensure_offer_log_columns(conn)
@@ -1741,11 +1802,10 @@ def get_offer_suppression_status(conn, trigger_reason, action_count, player, run
         closed["action_count"] + EMERGENCY_OFFER_SUPPRESS_ACTION_WINDOW
     )
     remaining_actions = max(0, suppress_until - action_count)
-    severe_override = is_severe_emergency_pressure(conn, player)
+    action_suppressed = remaining_actions > 0 and not severe_override
 
     status.update({
-        "is_suppressed": remaining_actions > 0 and not severe_override,
-        "day_suppressed": False,
+        "is_suppressed": status["is_suppressed"] or action_suppressed,
         "suppress_remaining_actions": remaining_actions,
         "suppress_until_action_count": suppress_until,
         "closed_action_count": closed["action_count"],
@@ -1768,12 +1828,12 @@ def get_emergency_offer_context(conn):
         """
     ).fetchone()["count"]
 
-    trigger_reason = (
-        get_resource_pressure_reason(player)
-        or get_team_state_pressure_reason(conn)
-        or get_low_efficiency_pressure_reason(conn)
-    )
     action_count = get_completed_duty_count(conn)
+    trigger_reason = get_emergency_offer_trigger_reason(
+        conn,
+        player,
+        action_count
+    )
     purchased = has_purchased_offer_for_trigger(conn, trigger_reason)
     suppression = get_offer_suppression_status(
         conn,
