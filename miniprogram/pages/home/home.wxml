@@ -252,13 +252,14 @@
     <view wx:if="{{offerVisible}}" class="offer-card">
       <view class="offer-topline">
         <text class="offer-kicker">战备补给协议</text>
-        <text class="offer-badge">协议：{{offer.urgency_label}}</text>
+        <text class="offer-badge">状态：{{offer.urgency_label}}</text>
       </view>
       <view class="offer-hero-row">
         <image wx:if="{{offerImageVisible}}" class="offer-image" src="{{offerImageSrc}}" mode="aspectFill" binderror="handleOfferImageError"></image>
         <view class="offer-copy-panel">
           <text class="offer-title">{{offer.title}}</text>
           <text class="offer-copy">{{offer.subtitle}}</text>
+          <text class="offer-system-notice">{{offerPressureNotice}}</text>
         </view>
       </view>
       <view class="offer-signal-grid">
@@ -267,7 +268,7 @@
           <text class="offer-signal-value">{{offerTriggerLabel}}</text>
         </view>
         <view class="offer-signal">
-          <text class="offer-signal-label">协议费用</text>
+          <text class="offer-signal-label">协议消耗</text>
           <text class="offer-signal-value">{{offer.price_label}}</text>
         </view>
       </view>
@@ -276,6 +277,13 @@
         <view wx:for="{{offerRewardRows}}" wx:key="label" class="offer-reward">
           <text class="offer-reward-label">{{item.label}}</text>
           <text class="offer-reward-value">{{item.value}}</text>
+        </view>
+      </view>
+      <text class="offer-reward-title">协议作用</text>
+      <view class="offer-help-grid">
+        <view wx:for="{{offerHelpRows}}" wx:key="label" class="offer-help-item">
+          <text class="offer-help-label">{{item.label}}</text>
+          <text class="offer-help-value">{{item.value}}</text>
         </view>
       </view>
       <view class="offer-actions">

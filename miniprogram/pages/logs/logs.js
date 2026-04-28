@@ -134,14 +134,45 @@ function formatGachaLog(row) {
 
 function getOfferOutcomeText(eventType) {
   if (eventType === "purchased") {
-    return "协议结果：补给入库，全员疲劳下降，健康恢复。"
+    return "处理结果：补给已购买并入库，资源与队伍状态获得恢复。"
   }
 
   if (eventType === "closed") {
-    return "协议结果：暂缓处理，补给室短时间待命。"
+    return "处理结果：玩家暂缓处理，补给室进入短时待命。"
   }
 
-  return "协议结果：补给信号已出现，等待指挥官处理。"
+  return "处理结果：补给协议已开放，等待玩家确认。"
+}
+
+function getOfferActionSummary(eventType, triggerReason) {
+  const reasonNotice = format.getTriggerReasonNotice(triggerReason)
+
+  if (eventType === "purchased") {
+    return `${reasonNotice} 玩家已启用协议，补给记录已归档。`
+  }
+
+  if (eventType === "closed") {
+    return `${reasonNotice} 玩家选择暂缓，系统保留关闭记录。`
+  }
+
+  return `${reasonNotice} 系统已记录本次补给开放。`
+}
+
+function formatSnapshotValue(value) {
+  if (value === undefined || value === null) {
+    return "--"
+  }
+
+  return value
+}
+
+function buildOfferSnapshotRows(row) {
+  return [
+    { label: "食物", value: formatSnapshotValue(row.food_before) },
+    { label: "电力", value: formatSnapshotValue(row.power_before) },
+    { label: "材料", value: formatSnapshotValue(row.materials_before) },
+    { label: "招募券", value: formatSnapshotValue(row.premium_currency_before) }
+  ]
 }
 
 function formatOfferActionCount(actionCount) {
@@ -182,21 +213,28 @@ function formatDutyLog(row) {
 }
 
 function formatOfferLog(row) {
+  const actionType = format.getOfferEventLabel(row.event_type)
+  const triggerReason = format.getTriggerReasonLabel(row.trigger_reason)
+  const snapshotRows = buildOfferSnapshotRows(row)
+
   return Object.assign({
     id: row.id,
-    action_type: format.getOfferEventLabel(row.event_type),
+    action_type: actionType,
     event_type: row.event_type,
-    trigger_reason: format.getTriggerReasonLabel(row.trigger_reason),
+    trigger_reason: triggerReason,
+    action_summary: getOfferActionSummary(row.event_type, row.trigger_reason),
     resource_snapshot_text: (
-      `食物 ${row.food_before} / 电力 ${row.power_before} / ` +
-      `材料 ${row.materials_before} / 招募券 ${row.premium_currency_before}`
+      `食物 ${snapshotRows[0].value} / 电力 ${snapshotRows[1].value} / ` +
+      `材料 ${snapshotRows[2].value} / 招募券 ${snapshotRows[3].value}`
     ),
-    survivor_count_text: row.survivor_count === undefined ? "--" : row.survivor_count,
+    resourceSnapshotRows: snapshotRows,
+    survivor_count_text: row.survivor_count === undefined || row.survivor_count === null ? "--" : row.survivor_count,
     action_count_text: formatOfferActionCount(row.action_count),
     outcome_text: getOfferOutcomeText(row.event_type),
     logCardClass: `log-card log-card--offer log-card--offer-${row.event_type || "exposed"}`,
     tagClass: getOfferEventClass(row.event_type),
-    markerText: "补给协议",
+    markerText: "应急补给协议",
+    logTitle: `${actionType} · 应急补给协议`,
     created_at: row.created_at
   }, buildLogTimeParts(row.created_at), {
     recordText: buildRecordText(row)

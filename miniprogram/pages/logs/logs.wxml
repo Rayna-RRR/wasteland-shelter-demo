@@ -112,14 +112,20 @@
             <text class="log-time">{{item.timeLabel}}</text>
           </view>
         </view>
-        <text class="log-title">{{item.markerText}}</text>
+        <text class="log-title">{{item.logTitle}}</text>
         <text class="log-meta-line">{{item.recordText}} · {{item.action_count_text}}</text>
-        <view class="offer-record-panel">
-          <text class="offer-record-line">压力来源：{{item.trigger_reason}}</text>
-          <text class="offer-record-line">触发节点：{{item.action_count_text}}</text>
-          <text class="offer-record-line">资源快照：{{item.resource_snapshot_text}}</text>
-          <text class="offer-record-line">幸存者数量：{{item.survivor_count_text}}</text>
-          <text class="offer-record-line offer-record-line--result">{{item.outcome_text}}</text>
+        <text class="log-body offer-log-summary">{{item.action_summary}}</text>
+        <view class="offer-record-compact">
+          <view class="offer-meta-chip-row">
+            <text class="offer-meta-chip">压力来源：{{item.trigger_reason}}</text>
+            <text class="offer-meta-chip">触发节点：{{item.action_count_text}}</text>
+            <text class="offer-meta-chip">幸存者：{{item.survivor_count_text}}</text>
+          </view>
+          <text class="offer-snapshot-label">触发时资源快照</text>
+          <view class="offer-snapshot-row">
+            <text wx:for="{{item.resourceSnapshotRows}}" wx:for-item="snapshot" wx:key="label" class="offer-snapshot-chip">{{snapshot.label}} {{snapshot.value}}</text>
+          </view>
+          <text class="offer-result-line">{{item.outcome_text}}</text>
         </view>
       </view>
       <button wx:if="{{offerHasHiddenLogs}}" class="log-toggle-button" hover-class="log-toggle-button--active" bindtap="toggleOfferLogs">{{offerToggleText}}</button>

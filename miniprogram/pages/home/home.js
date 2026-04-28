@@ -19,6 +19,10 @@ const RESOURCE_META = [
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
 const HOME_SURVIVOR_PREVIEW_LIMIT = 3
 const EMERGENCY_SUPPLY_IMAGE = "/assets/images/items/emergency_supply.png"
+const OFFER_HELP_ROWS = [
+  { label: "资源稳定", value: "补充食物 / 电力 / 材料" },
+  { label: "队伍恢复", value: "降低疲劳，恢复少量健康" }
+]
 
 const DIFFICULTY_NOTES = {
   "稳健": "开局配给：食物100 / 电力95 / 材料70 / 招募券45，适合熟悉流程但仍需规划。",
@@ -550,7 +554,9 @@ function buildClearedOfferState() {
     offerImageSrc: EMERGENCY_SUPPLY_IMAGE,
     offerImageVisible: true,
     offerTriggerLabel: "",
-    offerRewardRows: []
+    offerPressureNotice: "",
+    offerRewardRows: [],
+    offerHelpRows: []
   }
 }
 
@@ -602,10 +608,12 @@ function buildOfferRewardRows(offer) {
     { label: "招募券", value: `+${rewards.premium_currency || 0}` },
     { label: "食物", value: `+${rewards.food || 0}` },
     { label: "电力", value: `+${rewards.power || 0}` },
-    { label: "材料", value: `+${rewards.materials || 0}` },
-    { label: "全员疲劳", value: "-15" },
-    { label: "全员健康", value: "+5" }
+    { label: "材料", value: `+${rewards.materials || 0}` }
   ]
+}
+
+function buildOfferHelpRows() {
+  return OFFER_HELP_ROWS.map((item) => Object.assign({}, item))
 }
 
 function isLocalDevApi() {
@@ -672,7 +680,9 @@ Page({
     offerImageSrc: EMERGENCY_SUPPLY_IMAGE,
     offerImageVisible: true,
     offerTriggerLabel: "",
+    offerPressureNotice: "",
     offerRewardRows: [],
+    offerHelpRows: [],
     resourceCards: buildResourceCards(format.formatResources()),
     resourcePanelClass: "resource-status resource-status--normal",
     resourceStatusText: "等待同步",
@@ -953,13 +963,16 @@ Page({
         if (res.statusCode === 200 && res.data) {
           const active = Boolean(res.data.active)
           const offer = res.data.offer || null
+          const triggerReason = res.data.trigger_reason
 
           this.setData({
             offerVisible: active,
             offer,
             offerImageVisible: active ? true : this.data.offerImageVisible,
-            offerTriggerLabel: active ? format.getTriggerReasonLabel(res.data.trigger_reason) : "",
+            offerTriggerLabel: active ? format.getTriggerReasonLabel(triggerReason) : "",
+            offerPressureNotice: active ? format.getTriggerReasonNotice(triggerReason) : "",
             offerRewardRows: active ? buildOfferRewardRows(offer) : [],
+            offerHelpRows: active ? buildOfferHelpRows() : [],
             offerResultMessage: active ? "" : this.data.offerResultMessage,
             offerErrorMessage: active ? "" : this.data.offerErrorMessage
           })
@@ -1147,7 +1160,9 @@ Page({
             offer: null,
             offerImageVisible: true,
             offerTriggerLabel: "",
+            offerPressureNotice: "",
             offerRewardRows: [],
+            offerHelpRows: [],
             offerResultMessage: "",
             offerErrorMessage: "",
             offerExposed: false
