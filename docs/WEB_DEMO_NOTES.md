@@ -4,7 +4,7 @@
 
 主项目是微信小程序 + Flask + SQLite 原型。Web Demo 的作用是降低作品集评审门槛，让没有微信开发者工具或本地后端环境的人，也能在浏览器里快速看到核心循环和视觉方向。
 
-它不是替代主项目，也不是新的游戏版本。
+它不是替代主项目，也不是新的游戏版本。README 中的 Quick Preview 指向的是这个轻量浏览器预览。
 
 ## Web Demo 包含什么
 
@@ -18,6 +18,7 @@
 - 随机事件预览
 - 应急补给预览
 - 简化日志记录
+- Web Demo 与主小程序实现的区别提示
 
 页面复用了现有素材：
 
@@ -64,8 +65,8 @@ Web Demo 只提供浏览器预览：
 
 直接打开：
 
-```text
-web-demo/index.html
+```bash
+open web-demo/index.html
 ```
 
 如果浏览器限制本地资源读取，可以用简单静态服务打开仓库根目录，例如：
@@ -96,3 +97,12 @@ https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
 ```
 
 部署前需要确认 `web-demo/` 和 `miniprogram/assets/images/` 都已经提交，因为 Web Demo 通过相对路径复用这些素材。
+
+## README 对齐说明
+
+README 应明确区分：
+
+- Web Demo：静态、浏览器友好、mock state、快速预览。
+- Mini Program：主实现，连接 Flask + SQLite，包含实际项目逻辑。
+
+如果后续 Web Demo 行为改变，需要同步更新 README 的 Quick Preview 和本说明文档。
