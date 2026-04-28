@@ -296,6 +296,48 @@ function hideDutyIcon(dutyTypes, dutyType) {
   })
 }
 
+function buildTeamStateSummary(survivors) {
+  const currentSurvivors = survivors.filter((survivor) => survivor.status !== "left")
+  const activeCount = currentSurvivors.length
+  const dispatchableCount = currentSurvivors.filter((survivor) => !survivor.unavailable).length
+  const highFatigueCount = currentSurvivors.filter((survivor) => getNumberValue(survivor.fatigue) >= 80).length
+  const lowHealthCount = currentSurvivors.filter((survivor) => getNumberValue(survivor.health) <= 60).length
+  const severeHealthCount = currentSurvivors.filter((survivor) => getNumberValue(survivor.health) <= 30).length
+  let tone = "normal"
+  let label = "状态可控"
+  let text = "当前队伍状态可控，可以继续安排值勤。"
+
+  if (!activeCount) {
+    tone = "warning"
+    label = "缺少人手"
+    text = "当前没有可用队伍信息，请先同步幸存者名单。"
+  } else if (severeHealthCount > 0 || lowHealthCount >= 2) {
+    tone = "danger"
+    label = "健康风险"
+    text = "健康风险上升，继续高风险值勤可能导致受伤。"
+  } else if (highFatigueCount >= 2) {
+    tone = "warning"
+    label = "疲劳累积"
+    text = "队伍疲劳正在累积，建议安排休整。"
+  } else if (!dispatchableCount) {
+    tone = "danger"
+    label = "暂不可派遣"
+    text = "当前成员暂不可值勤，需要先处理伤情或等待恢复。"
+  }
+
+  return {
+    label,
+    text,
+    cardClass: `team-state-card team-state-card--${tone}`,
+    badgeClass: `team-state-badge team-state-badge--${tone}`,
+    chips: [
+      { label: "可派遣", value: `${dispatchableCount}/${activeCount || 0}` },
+      { label: "高疲劳", value: highFatigueCount },
+      { label: "健康风险", value: lowHealthCount }
+    ]
+  }
+}
+
 function buildRiskHint(survivor) {
   if (!survivor) {
     return {
@@ -699,7 +741,8 @@ function applySurvivorSelection(survivors, selectedSurvivorId, collapsedState) {
       survivors: [],
       survivorGroups: [],
       selectedSurvivorId: null,
-      selectedSurvivor: null
+      selectedSurvivor: null,
+      teamStateSummary: buildTeamStateSummary([])
     }
   }
 
@@ -740,7 +783,8 @@ function applySurvivorSelection(survivors, selectedSurvivorId, collapsedState) {
       selectedSurvivor ? selectedSurvivor.id : null
     ),
     selectedSurvivorId: selectedSurvivor ? selectedSurvivor.id : null,
-    selectedSurvivor
+    selectedSurvivor,
+    teamStateSummary: buildTeamStateSummary(markedSurvivors)
   }
 }
 
@@ -829,12 +873,13 @@ function buildDayTransitionPanel(dayTransition) {
   }
 }
 
-function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTransition) {
+function buildResultPanel(result, survivor, dutyType, dutyLabel, previousSurvivor, dayTransition) {
   const survivorState = formatState(survivor.fatigue, survivor.health)
   const profile = normalizeSurvivorProfile(survivor, survivorState.stateTag)
   const resourceDeltaRows = buildResourceDeltaRows(result)
   const stateDeltaRows = buildStateDeltaRows(result, survivor, previousSurvivor)
   const consequencePanel = buildConsequencePanel(result, survivor)
+  const dutyMeta = DUTY_DISPATCH_META[dutyType] || {}
   const settlementStatus = buildSettlementStatus(
     resourceDeltaRows,
     stateDeltaRows,
@@ -848,7 +893,10 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
     survivorRole: survivor.role || "未登记职能",
     survivorRarity: getRarityLabel(survivor.rarity),
     survivorRarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
+    dutyType: dutyType || "",
     dutyLabel,
+    dutyIconPath: dutyMeta.iconPath || "",
+    hasDutyIcon: Boolean(dutyMeta.iconPath),
     resultTitle: `值勤完成 · ${dutyLabel}`,
     resultCardClass: "duty-result-card",
     resultSignalText: settlementStatus.label || buildResultSignalText(resourceDeltaRows, stateDeltaRows),
@@ -989,6 +1037,7 @@ Page({
     rarityGroupCollapsed: {},
     selectedSurvivorId: null,
     selectedSurvivor: null,
+    teamStateSummary: buildTeamStateSummary([]),
     dutyTypes: buildDutyOptions(),
     dutyResult: null,
     resultAnimationIndex: 0,
@@ -1030,6 +1079,7 @@ Page({
       rarityGroupCollapsed: {},
       selectedSurvivorId: null,
       selectedSurvivor: null,
+      teamStateSummary: buildTeamStateSummary([]),
       dutyResult: null,
       resultAnimationIndex: this.data.resultAnimationIndex,
       offerHintVisible: false,
@@ -1165,6 +1215,20 @@ Page({
     })
   },
 
+  handleResultDutyIconError() {
+    const dutyResult = this.data.dutyResult
+
+    if (!dutyResult) {
+      return
+    }
+
+    this.setData({
+      dutyResult: Object.assign({}, dutyResult, {
+        hasDutyIcon: false
+      })
+    })
+  },
+
   assignDuty(event) {
     if (this.data.assigning) {
       return
@@ -1219,6 +1283,7 @@ Page({
               buildResultPanel(
                 result,
                 survivor,
+                dutyType,
                 format.getDutyLabel(dutyType),
                 previousSurvivor,
                 res.data.day_transition
@@ -1366,6 +1431,7 @@ Page({
               buildResultPanel(
                 result,
                 survivor,
+                "",
                 "休整",
                 previousSurvivor,
                 res.data.day_transition

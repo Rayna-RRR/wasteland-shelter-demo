@@ -151,6 +151,19 @@
         <text class="risk-hint-label">派遣判断</text>
         <text class="risk-hint-text">{{selectedSurvivor.riskHintText}}</text>
       </view>
+      <view class="{{teamStateSummary.cardClass}}">
+        <view class="team-state-head">
+          <text class="team-state-kicker">队伍状态</text>
+          <text class="{{teamStateSummary.badgeClass}}">{{teamStateSummary.label}}</text>
+        </view>
+        <text class="team-state-copy">{{teamStateSummary.text}}</text>
+        <view class="team-state-chip-row">
+          <view wx:for="{{teamStateSummary.chips}}" wx:key="label" class="team-state-chip">
+            <text class="team-state-chip-label">{{item.label}}</text>
+            <text class="team-state-chip-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
       <view class="flavor-panel">
         <view wx:if="{{selectedSurvivor.workStyleLine}}" class="flavor-row">
           <text class="flavor-label">作风</text>
@@ -233,7 +246,18 @@
           </view>
           <view class="duty-result-copy">
             <text class="result-kicker">结算报告</text>
-            <text class="result-title">{{dutyResult.resultTitle}}</text>
+            <view class="result-title-row">
+              <view wx:if="{{dutyResult.hasDutyIcon}}" class="result-duty-icon-wrap">
+                <image
+                  class="result-duty-icon"
+                  src="{{dutyResult.dutyIconPath}}"
+                  mode="aspectFit"
+                  data-duty-type="{{dutyResult.dutyType}}"
+                  binderror="handleResultDutyIconError"
+                ></image>
+              </view>
+              <text class="result-title">{{dutyResult.resultTitle}}</text>
+            </view>
             <view class="result-meta-row">
               <text class="result-survivor-name">{{dutyResult.survivorName}}</text>
               <text class="{{dutyResult.survivorRarityBadgeClass}}">{{dutyResult.survivorRarity}}</text>
