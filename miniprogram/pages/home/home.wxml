@@ -1,4 +1,8 @@
 <view class="page home-page">
+  <view wx:if="{{homeBackgroundVisible}}" class="home-background">
+    <image class="home-background-image" src="{{homeBackgroundSrc}}" mode="aspectFill" binderror="handleHomeBackgroundError"></image>
+    <view class="home-background-shade"></view>
+  </view>
   <view class="home-texture"></view>
 
   <block wx:if="{{checkingInit}}">
@@ -77,8 +81,20 @@
         <text class="event-day-label">第 {{pendingEvent.day}} 天事件</text>
         <text class="event-priority-label">先处理</text>
       </view>
-      <text class="event-title">{{pendingEvent.title}}</text>
-      <text class="event-copy">{{pendingEvent.description}}</text>
+      <view class="event-content-row">
+        <image
+          wx:if="{{pendingEvent.hasIllustration}}"
+          class="event-illustration"
+          src="{{pendingEvent.illustrationSrc}}"
+          mode="aspectFill"
+          data-event-id="{{pendingEvent.id}}"
+          binderror="handleEventIllustrationError"
+        ></image>
+        <view class="event-copy-panel">
+          <text class="event-title">{{pendingEvent.title}}</text>
+          <text class="event-copy">{{pendingEvent.description}}</text>
+        </view>
+      </view>
       <view class="event-choice-list">
         <button
           wx:for="{{pendingEvent.choices}}"

@@ -18,7 +18,17 @@ const RESOURCE_META = [
 
 const DIFFICULTY_OPTIONS = ["稳健", "标准", "极端"]
 const HOME_SURVIVOR_PREVIEW_LIMIT = 3
+const HOME_BACKGROUND_IMAGE = "/assets/images/backgrounds/shelter_home.png"
 const EMERGENCY_SUPPLY_IMAGE = "/assets/images/items/emergency_supply.png"
+const EVENT_ILLUSTRATION_MAP = {
+  filter_clog_v1: "/assets/images/events/event_filter_clog.png",
+  battery_cache_v1: "/assets/images/events/event_battery_cache.png",
+  caravan_trade_v1: "/assets/images/events/event_caravan_trade.png",
+  collapsed_tunnel_v1: "/assets/images/events/event_collapsed_tunnel.png",
+  sickbay_shortage_v1: "/assets/images/events/event_sickbay_shortage.png",
+  gate_argument_v1: "/assets/images/events/event_gate_argument.png",
+  escort_request_v1: "/assets/images/events/event_escort_request.png"
+}
 const OFFER_HELP_ROWS = [
   { label: "资源稳定", value: "补充食物 / 电力 / 材料" },
   { label: "队伍恢复", value: "降低疲劳，恢复少量健康" }
@@ -262,12 +272,17 @@ function normalizePendingEvent(runState) {
     return null
   }
 
+  const eventId = pendingEvent.id || ""
+  const illustrationSrc = EVENT_ILLUSTRATION_MAP[eventId] || ""
+
   return {
-    id: pendingEvent.id || "",
+    id: eventId,
     day: pendingEvent.day || runState.current_day,
     title: pendingEvent.title || "今日事件",
     description: pendingEvent.description || "",
     targetSurvivor: pendingEvent.target_survivor || null,
+    illustrationSrc,
+    hasIllustration: Boolean(illustrationSrc),
     choices: Array.isArray(pendingEvent.choices) ? pendingEvent.choices.map((choice) => {
       return {
         id: choice.id,
@@ -636,6 +651,8 @@ Page({
   data: {
     checkingInit: false,
     initialized: false,
+    homeBackgroundSrc: HOME_BACKGROUND_IMAGE,
+    homeBackgroundVisible: true,
     initSubmitting: false,
     initErrorMessage: "",
     initProfile: buildInitProfile({}),
@@ -702,6 +719,28 @@ Page({
     if (this.data.isLocalDev) {
       this.loadDemoModeStatus()
     }
+  },
+
+  handleHomeBackgroundError() {
+    this.setData({
+      homeBackgroundVisible: false
+    })
+  },
+
+  handleEventIllustrationError(event) {
+    const eventId = event.currentTarget.dataset.eventId
+    const pendingEvent = this.data.pendingEvent
+
+    if (!pendingEvent || (eventId && pendingEvent.id !== eventId)) {
+      return
+    }
+
+    this.setData({
+      pendingEvent: Object.assign({}, pendingEvent, {
+        hasIllustration: false,
+        illustrationSrc: ""
+      })
+    })
   },
 
   loadInitStatus() {
