@@ -14,18 +14,22 @@ const RESOURCE_DELTA_META = [
 const DUTY_DISPATCH_META = {
   scavenge: {
     tone: "risk",
+    iconPath: "/assets/images/duties/duty_scavenge.png",
     helperText: "进入废墟搜集物资，收益较高但风险更明显。"
   },
   generate_power: {
     tone: "normal",
+    iconPath: "/assets/images/duties/duty_power.png",
     helperText: "维护发电机组，消耗材料换取电力运转。"
   },
   cook: {
     tone: "normal",
+    iconPath: "/assets/images/duties/duty_cook.png",
     helperText: "整理库存与灶台，稳定避难所口粮。"
   },
   guard: {
     tone: "risk",
+    iconPath: "/assets/images/duties/duty_guard.png",
     helperText: "承担夜间守卫，资源消耗和状态压力更高。"
   }
 }
@@ -272,8 +276,22 @@ function buildDutyOptions() {
 
     return Object.assign({}, duty, {
       dispatchTone: tone,
+      iconPath: meta.iconPath || "",
+      hasIcon: Boolean(meta.iconPath),
       helperText: meta.helperText || "执行常规值勤，按当前状态结算收益与消耗。",
       dispatchCardClass: `dispatch-card dispatch-card--${tone}`
+    })
+  })
+}
+
+function hideDutyIcon(dutyTypes, dutyType) {
+  return dutyTypes.map((duty) => {
+    if (duty.type !== dutyType) {
+      return duty
+    }
+
+    return Object.assign({}, duty, {
+      hasIcon: false
     })
   })
 }
@@ -489,6 +507,136 @@ function buildResultSignalText(resourceDeltaRows, stateDeltaRows) {
   return "行动记录"
 }
 
+function getDeltaRowValue(rows, label) {
+  const row = rows.find((item) => item.label === label)
+  return row ? getNumberValue(row.value) : 0
+}
+
+function getResourceDeltaStats(resourceDeltaRows) {
+  return resourceDeltaRows.reduce((stats, item) => {
+    const value = getNumberValue(item.value)
+
+    if (value > 0) {
+      stats.gain += value
+    } else if (value < 0) {
+      stats.loss += Math.abs(value)
+    }
+
+    stats.total += value
+    return stats
+  }, {
+    gain: 0,
+    loss: 0,
+    total: 0
+  })
+}
+
+function buildSettlementStatus(resourceDeltaRows, stateDeltaRows, survivor, consequencePanel) {
+  const stats = getResourceDeltaStats(resourceDeltaRows)
+  const fatigueChange = getDeltaRowValue(stateDeltaRows, "疲劳")
+  const healthChange = getDeltaRowValue(stateDeltaRows, "健康")
+  const finalFatigue = getNumberValue(survivor.fatigue)
+  const finalHealth = getNumberValue(survivor.health)
+  const hasConsequence = consequencePanel && consequencePanel.hasConsequence
+
+  if (
+    hasConsequence ||
+    healthChange <= -10 ||
+    finalHealth <= 25
+  ) {
+    return {
+      key: "high_risk",
+      label: "高风险结果",
+      tone: "danger",
+      badgeClass: "result-signal-badge result-signal-badge--danger"
+    }
+  }
+
+  if (healthChange <= -4 || finalHealth <= 45) {
+    return {
+      key: "health_risk",
+      label: "健康风险",
+      tone: "danger",
+      badgeClass: "result-signal-badge result-signal-badge--danger"
+    }
+  }
+
+  if (fatigueChange >= 14 || finalFatigue >= 80) {
+    return {
+      key: "fatigue_rise",
+      label: "疲劳上升",
+      tone: "warning",
+      badgeClass: "result-signal-badge result-signal-badge--warning"
+    }
+  }
+
+  if (stats.loss >= 8 || stats.total < -2 || (stats.gain <= 2 && stats.loss > 0)) {
+    return {
+      key: "resource_pressure",
+      label: "资源承压",
+      tone: "warning",
+      badgeClass: "result-signal-badge result-signal-badge--warning"
+    }
+  }
+
+  if (stats.gain >= 6 && stats.total > 0) {
+    return {
+      key: "good_yield",
+      label: "收益良好",
+      tone: "gain",
+      badgeClass: "result-signal-badge result-signal-badge--gain"
+    }
+  }
+
+  return {
+    key: "stable",
+    label: "状态可控",
+    tone: "normal",
+    badgeClass: "result-signal-badge result-signal-badge--normal"
+  }
+}
+
+function buildNextStepHint(status, resourceDeltaRows, stateDeltaRows, survivor, dutyLabel) {
+  const stats = getResourceDeltaStats(resourceDeltaRows)
+  const foodChange = getDeltaRowValue(resourceDeltaRows, "食物")
+  const powerChange = getDeltaRowValue(resourceDeltaRows, "电力")
+  const materialsChange = getDeltaRowValue(resourceDeltaRows, "材料")
+  const fatigueChange = getDeltaRowValue(stateDeltaRows, "疲劳")
+  const healthChange = getDeltaRowValue(stateDeltaRows, "健康")
+  const finalFatigue = getNumberValue(survivor.fatigue)
+  const finalHealth = getNumberValue(survivor.health)
+
+  if (status.key === "high_risk" || status.key === "health_risk" || healthChange <= -4 || finalHealth <= 45) {
+    return "健康风险上升，继续高风险行动可能导致受伤。"
+  }
+
+  if (status.key === "fatigue_rise" || fatigueChange >= 12 || finalFatigue >= 75) {
+    return "当前疲劳偏高，建议安排休整。"
+  }
+
+  if (dutyLabel === "休整" && (fatigueChange < 0 || healthChange > 0)) {
+    return "休整后状态有所恢复，可以重新评估低风险任务。"
+  }
+
+  if (foodChange > 0) {
+    return "食物压力有所缓解，可以继续维持短期值勤。"
+  }
+
+  if (powerChange > 0) {
+    return "电力供应有所恢复，可以继续安排基础轮值。"
+  }
+
+  if (materialsChange > 0) {
+    return "材料库存有所补充，后续维护压力下降。"
+  }
+
+  if (status.key === "resource_pressure" || stats.gain <= 2) {
+    return "本次行动收益有限，建议调整派遣对象或任务类型。"
+  }
+
+  return "状态仍可控，可以根据资源压力安排下一次值勤。"
+}
+
 function normalizeSurvivorProfile(survivor, fallbackStateTag) {
   const data = survivor || {}
 
@@ -686,12 +834,34 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
   const profile = normalizeSurvivorProfile(survivor, survivorState.stateTag)
   const resourceDeltaRows = buildResourceDeltaRows(result)
   const stateDeltaRows = buildStateDeltaRows(result, survivor, previousSurvivor)
+  const consequencePanel = buildConsequencePanel(result, survivor)
+  const settlementStatus = buildSettlementStatus(
+    resourceDeltaRows,
+    stateDeltaRows,
+    survivor,
+    consequencePanel
+  )
+  const rarityKey = getRarityKey(survivor.rarity)
 
   return Object.assign({
     survivorName: survivor.name || "幸存者",
+    survivorRole: survivor.role || "未登记职能",
+    survivorRarity: getRarityLabel(survivor.rarity),
+    survivorRarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
     dutyLabel,
+    resultTitle: `值勤完成 · ${dutyLabel}`,
     resultCardClass: "duty-result-card",
-    resultSignalText: buildResultSignalText(resourceDeltaRows, stateDeltaRows),
+    resultSignalText: settlementStatus.label || buildResultSignalText(resourceDeltaRows, stateDeltaRows),
+    settlementLabel: settlementStatus.label,
+    settlementTone: settlementStatus.tone,
+    settlementBadgeClass: settlementStatus.badgeClass,
+    nextStepHint: buildNextStepHint(
+      settlementStatus,
+      resourceDeltaRows,
+      stateDeltaRows,
+      survivor,
+      dutyLabel
+    ),
     traitLabel: profile.traitLabel,
     workStyleLine: profile.workStyleLine,
     archiveLine: profile.archiveLine,
@@ -711,7 +881,7 @@ function buildResultPanel(result, survivor, dutyLabel, previousSurvivor, dayTran
     healthClass: survivorState.healthClass,
     stateTag: profile.currentStateTag || survivorState.stateTag,
     stateTagClass: getStatusTagClass(survivor.status, survivorState.stateTagClass)
-  }, portraitMap.getSurvivorPortrait(survivor), buildConsequencePanel(result, survivor), buildDayTransitionPanel(dayTransition))
+  }, portraitMap.getSurvivorPortrait(survivor), consequencePanel, buildDayTransitionPanel(dayTransition))
 }
 
 function applyResultAnimation(resultPanel, animationIndex) {
@@ -980,6 +1150,18 @@ Page({
         rarityGroupCollapsed,
         this.data.selectedSurvivorId
       )
+    })
+  },
+
+  handleDutyIconError(event) {
+    const dutyType = event.currentTarget.dataset.dutyType
+
+    if (!dutyType) {
+      return
+    }
+
+    this.setData({
+      dutyTypes: hideDutyIcon(this.data.dutyTypes, dutyType)
     })
   },
 

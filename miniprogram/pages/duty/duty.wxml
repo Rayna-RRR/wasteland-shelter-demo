@@ -198,9 +198,22 @@
           loading="{{assigning}}"
           disabled="{{assigning || actionBlocked || selectedSurvivor.unavailable}}"
         >
-          <text class="dispatch-card-kicker">{{duty.riskLabel || "普通"}}</text>
-          <text class="dispatch-card-title">{{actionBlocked ? "本轮行动已结束" : (selectedSurvivor.unavailable ? "不可派遣" : duty.label)}}</text>
-          <text class="dispatch-card-helper">{{duty.helperText}}</text>
+          <view class="dispatch-card-content">
+            <view wx:if="{{duty.hasIcon}}" class="dispatch-card-icon-wrap">
+              <image
+                class="dispatch-card-icon"
+                src="{{duty.iconPath}}"
+                mode="aspectFit"
+                data-duty-type="{{duty.type}}"
+                binderror="handleDutyIconError"
+              ></image>
+            </view>
+            <view class="dispatch-card-text">
+              <text class="dispatch-card-kicker">{{duty.riskLabel || "普通"}}</text>
+              <text class="dispatch-card-title">{{actionBlocked ? "本轮行动已结束" : (selectedSurvivor.unavailable ? "不可派遣" : duty.label)}}</text>
+              <text class="dispatch-card-helper">{{duty.helperText}}</text>
+            </view>
+          </view>
         </button>
         <view wx:if="{{actionBlocked}}" class="message-card">
           <text class="muted">{{actionBlockMessage}}</text>
@@ -219,12 +232,17 @@
             <text wx:else class="{{dutyResult.portraitFallbackClass}}">{{dutyResult.portraitFallbackText}}</text>
           </view>
           <view class="duty-result-copy">
-            <text class="result-kicker">行动回报</text>
-            <text class="result-title">{{dutyResult.survivorName}} · {{dutyResult.dutyLabel}}</text>
+            <text class="result-kicker">结算报告</text>
+            <text class="result-title">{{dutyResult.resultTitle}}</text>
+            <view class="result-meta-row">
+              <text class="result-survivor-name">{{dutyResult.survivorName}}</text>
+              <text class="{{dutyResult.survivorRarityBadgeClass}}">{{dutyResult.survivorRarity}}</text>
+              <text class="result-meta-chip">{{dutyResult.survivorRole}}</text>
+            </view>
           </view>
         </view>
         <view class="result-status-stack">
-          <text class="result-signal-badge">{{dutyResult.resultSignalText}}</text>
+          <text class="{{dutyResult.settlementBadgeClass}}">{{dutyResult.settlementLabel}}</text>
           <text class="{{dutyResult.stateTagClass}}">{{dutyResult.stateTag}}</text>
         </view>
       </view>
@@ -234,7 +252,7 @@
         <text class="result-alert-copy">{{dutyResult.consequenceMessage}}</text>
         <text class="result-alert-detail">{{dutyResult.consequenceDetail}}</text>
       </view>
-      <view class="result-feedback-panel">
+      <view class="result-feedback-panel result-feedback-panel--compact">
         <view class="feedback-block">
           <text class="feedback-title">资源变化</text>
           <view wx:if="{{dutyResult.hasResourceDeltas}}" class="delta-grid">
@@ -254,6 +272,10 @@
             </view>
           </view>
         </view>
+      </view>
+      <view class="next-step-panel">
+        <text class="next-step-label">下一步建议</text>
+        <text class="next-step-text">{{dutyResult.nextStepHint}}</text>
       </view>
       <view wx:if="{{dutyResult.hasDayTransition}}" class="day-transition-card">
         <view class="day-transition-head">
