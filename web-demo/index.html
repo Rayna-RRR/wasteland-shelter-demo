@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>废土避难所值班长 Web Demo</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <div class="background-layer" aria-hidden="true">
+      <img src="../miniprogram/assets/images/backgrounds/shelter_home.png" alt="" data-fallback="避难所背景">
+      <div class="background-shade"></div>
+    </div>
+
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Wasteland Shelter Duty Manager</p>
+        <h1>废土避难所值班长</h1>
+        <p class="subtitle">Recruit survivor → assign duty → resources change → team state shifts → event / emergency offer → logs.</p>
+        <p class="preview-note">This browser demo is a lightweight preview. The main prototype is implemented as a WeChat Mini Program + Flask + SQLite project.</p>
+      </header>
+
+      <section class="grid-layout">
+        <section class="panel resources-panel" aria-labelledby="resources-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">资源监控</p>
+              <h2 id="resources-title">当前资源</h2>
+            </div>
+            <span id="pressureBadge" class="status-badge">运转稳定</span>
+          </div>
+          <div id="resourceGrid" class="resource-grid"></div>
+        </section>
+
+        <section class="panel roster-panel" aria-labelledby="roster-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">幸存者通讯</p>
+              <h2 id="roster-title">队伍名单</h2>
+            </div>
+            <button id="recruitButton" class="small-button" type="button">招募幸存者</button>
+          </div>
+          <div id="teamHint" class="team-hint"></div>
+          <div id="survivorList" class="survivor-list"></div>
+        </section>
+
+        <section class="panel duty-panel" aria-labelledby="duty-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">值勤调度</p>
+              <h2 id="duty-title">派遣任务</h2>
+            </div>
+            <span id="selectedBadge" class="status-badge">未选择</span>
+          </div>
+          <div id="dutyOptions" class="duty-options"></div>
+          <button id="assignButton" class="primary-button" type="button">派遣值勤</button>
+        </section>
+
+        <section class="panel result-panel" aria-labelledby="result-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">结算报告</p>
+              <h2 id="result-title">值勤结果</h2>
+            </div>
+            <span id="resultBadge" class="status-badge">等待行动</span>
+          </div>
+          <div id="resultCard" class="result-card empty-state">执行一次值勤后，这里会显示资源变化、幸存者状态变化和下一步建议。</div>
+        </section>
+
+        <section id="pressurePanel" class="panel pressure-panel" aria-labelledby="pressure-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">压力反馈</p>
+              <h2 id="pressure-title">事件 / 补给</h2>
+            </div>
+            <span id="pressureType" class="status-badge">待命</span>
+          </div>
+          <div id="pressureCard" class="empty-state">连续值勤或资源压力上升后，会出现随机事件或应急补给预览。</div>
+        </section>
+
+        <section class="panel log-panel" aria-labelledby="log-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">行动记录</p>
+              <h2 id="log-title">日志</h2>
+            </div>
+            <button id="resetButton" class="small-button secondary" type="button">重置预览</button>
+          </div>
+          <div id="logList" class="log-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

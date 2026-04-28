@@ -10,6 +10,30 @@
 
 ---
 
+## Quick Preview
+
+如果只是想快速浏览作品集效果，可以打开静态 Web Demo：
+
+```bash
+open web-demo/index.html
+```
+
+Web Demo 是一个低门槛浏览器预览，用静态前端状态展示核心循环：
+
+```text
+Recruit survivor -> assign duty -> resources change -> fatigue / health change -> random event / emergency offer -> logs
+```
+
+注意：微信小程序 + Flask + SQLite 仍然是本项目的主实现。Web Demo 不连接 Flask，不写入 SQLite，也不替代真实小程序原型。
+
+预留 GitHub Pages 地址：
+
+```text
+https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
+```
+
+---
+
 ## 当前版本的核心循环
 
 当前原型围绕这条循环展开：
