@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+*.local
+project.private.config.json
+config.local.js
 node_modules/
 *.log
 backend/data/game.db

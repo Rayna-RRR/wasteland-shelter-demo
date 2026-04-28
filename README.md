@@ -104,6 +104,28 @@ http://localhost:8080/web-demo/
 
 ### 微信小程序主原型
 
+#### 本地 AppID 配置
+
+公开仓库中的 `miniprogram/project.config.json` 使用微信开发者工具可识别的占位 AppID：
+
+```json
+"appid": "touristappid"
+```
+
+如果需要使用自己的微信小程序 AppID，请复制本地私有配置示例：
+
+```bash
+cp miniprogram/project.private.config.example.json miniprogram/project.private.config.json
+```
+
+然后只在本地的 `miniprogram/project.private.config.json` 里把占位值改成自己的 AppID：
+
+```json
+"appid": "your-wechat-app-id"
+```
+
+不要把真实 AppID、AppSecret、token、云开发环境 ID 或其他密钥提交到公开仓库。`project.private.config.json` 已加入 `.gitignore`，用于存放微信开发者工具的本地私有配置。
+
 初始化或修复本地 SQLite 数据库：
 
 ```bash
