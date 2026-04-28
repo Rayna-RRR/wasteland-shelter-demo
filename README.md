@@ -1,4 +1,4 @@
-# Wasteland Shelter Duty Manager / 废土避难所值勤管理器
+# 废土避难所值勤管理器
 
 一个面向游戏运营 / R&D-support operations 实习作品集的轻量废土避难所管理原型。
 
@@ -6,7 +6,13 @@
 
 ---
 
-## Quick Preview
+## 快速预览
+
+在线打开互动 Web Demo：
+
+```text
+https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
+```
 
 快速浏览静态 Web Demo：
 
@@ -14,17 +20,13 @@
 open web-demo/index.html
 ```
 
-预留 GitHub Pages 地址：
+说明：GitHub Pages 根路径可能显示仓库 README；`/web-demo/` 才是可交互的浏览器预览页面。
 
-```text
-https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
-```
-
-说明：Web Demo 是轻量浏览器预览，使用静态前端状态模拟核心循环；它不是完整实现，也不连接 Flask / SQLite。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
+Web Demo 是轻量浏览器预览，使用静态前端状态模拟核心循环；它不是完整实现，也不连接 Flask / SQLite。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
 
 ---
 
-## Project Positioning
+## 项目定位
 
 《废土避难所值勤管理器》是一个轻量避难所管理原型，用于展示：
 
@@ -36,7 +38,7 @@ https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
 
 ---
 
-## Core Loop
+## 核心循环
 
 ```text
 Recruit survivor
@@ -55,7 +57,7 @@ Recruit survivor
 
 ---
 
-## Main Features
+## 主要功能
 
 - 幸存者招募与重复角色补偿
 - 按稀有度分组的幸存者名单与值勤派遣
@@ -68,7 +70,7 @@ Recruit survivor
 
 ---
 
-## Tech Stack
+## 技术栈
 
 - WeChat Mini Program
 - Python 3.9 + Flask + flask-cors
@@ -78,9 +80,9 @@ Recruit survivor
 
 ---
 
-## How to Run
+## 运行方式
 
-### A. Web Demo quick preview
+### 浏览器预览版快速查看
 
 直接打开静态预览：
 
@@ -100,7 +102,7 @@ python3 -m http.server 8080
 http://localhost:8080/web-demo/
 ```
 
-### B. Main Mini Program prototype
+### 微信小程序主原型
 
 初始化或修复本地 SQLite 数据库：
 
@@ -126,7 +128,7 @@ http://localhost:5001
 
 ---
 
-## Web Demo vs Mini Program
+## 浏览器预览版与小程序主实现对比
 
 | 项目 | Web Demo | Mini Program 主实现 |
 | --- | --- | --- |
@@ -139,7 +141,7 @@ http://localhost:5001
 
 ---
 
-## Portfolio Value
+## 作品集价值
 
 从游戏运营 / R&D-support operations 角度，这个项目重点展示：
 
@@ -151,7 +153,7 @@ http://localhost:5001
 
 ---
 
-## Project Scope and Limitations
+## 项目范围与限制
 
 当前项目保持诚实范围：
 
@@ -171,37 +173,37 @@ http://localhost:5001
 
 ---
 
-## Screenshots / Demo Media
+## 截图与演示素材
 
 以下位置预留给作品集截图或录屏动图：
 
-### Home
+### 首页
 
 > TODO: 添加首页资源与幸存者概览截图。
 
-### Duty Dispatch
+### 值勤派遣
 
 > TODO: 添加值勤派遣、稀有度分组和 duty icons 截图。
 
-### Duty Result
+### 值勤结果
 
 > TODO: 添加值勤结果、资源变化、疲劳 / 健康变化和下一步建议截图。
 
-### Emergency Offer
+### 应急补给
 
 > TODO: 添加压力触发的应急补给协议截图。
 
-### Logs
+### 日志
 
 > TODO: 添加招募 / 值勤 / 补给日志截图。
 
-### Web Demo
+### 浏览器预览版
 
 > TODO: 添加浏览器静态预览截图。
 
 ---
 
-## Repository Structure
+## 仓库结构
 
 ```text
 wasteland-shelter-demo/
@@ -230,6 +232,6 @@ wasteland-shelter-demo/
 
 ---
 
-## Notes
+## 说明
 
 本项目重点是“轻量游戏原型 + 系统设计表达 + 作品集展示”。README 只描述当前仓库已经实现的内容和明确的预览方式，不宣称覆盖完整商业游戏所需的战斗、建筑、账号、支付或线上运营系统。
