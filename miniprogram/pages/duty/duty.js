@@ -30,6 +30,15 @@ const DUTY_DISPATCH_META = {
   }
 }
 
+const RARITY_GROUP_ORDER = ["ssr", "sr", "r", "unknown"]
+const RARITY_GROUP_META = {
+  ssr: { label: "SSR 幸存者", shortLabel: "SSR" },
+  sr: { label: "SR 幸存者", shortLabel: "SR" },
+  r: { label: "R 幸存者", shortLabel: "R" },
+  unknown: { label: "未登记幸存者", shortLabel: "未知" }
+}
+const LONG_DISPATCH_LIST_THRESHOLD = 6
+
 function getNextResultAnimationIndex(currentIndex) {
   return currentIndex === 0 ? 1 : 0
 }
@@ -98,6 +107,139 @@ function getRarityKey(rarity) {
 
 function getRarityLabel(rarity) {
   return rarity || "R"
+}
+
+function getRarityGroupKey(rarity) {
+  const value = String(rarity || "R").toUpperCase()
+
+  if (value === "SSR") {
+    return "ssr"
+  }
+
+  if (value === "SR") {
+    return "sr"
+  }
+
+  if (value === "R") {
+    return "r"
+  }
+
+  return "unknown"
+}
+
+function getSurvivorDispatchRank(survivor) {
+  if (survivor.status === "left") {
+    return 3
+  }
+
+  if (survivor.unavailable || survivor.status === "injured") {
+    return 2
+  }
+
+  return 0
+}
+
+function getRarityGroupRank(survivor) {
+  const groupKey = getRarityGroupKey(survivor.rarity)
+  const groupIndex = RARITY_GROUP_ORDER.indexOf(groupKey)
+
+  return groupIndex === -1 ? RARITY_GROUP_ORDER.length : groupIndex
+}
+
+function sortSurvivorsForDispatch(left, right) {
+  const rankDelta = getSurvivorDispatchRank(left) - getSurvivorDispatchRank(right)
+
+  if (rankDelta !== 0) {
+    return rankDelta
+  }
+
+  const fatigueDelta = Number(left.fatigue || 0) - Number(right.fatigue || 0)
+  if (fatigueDelta !== 0) {
+    return fatigueDelta
+  }
+
+  const healthDelta = Number(right.health || 0) - Number(left.health || 0)
+  if (healthDelta !== 0) {
+    return healthDelta
+  }
+
+  return String(left.name || "").localeCompare(String(right.name || ""), "zh-Hans-CN")
+}
+
+function sortSurvivorsForDefaultSelection(left, right) {
+  const rarityDelta = getRarityGroupRank(left) - getRarityGroupRank(right)
+
+  if (rarityDelta !== 0) {
+    return rarityDelta
+  }
+
+  return sortSurvivorsForDispatch(left, right)
+}
+
+function getDefaultCollapsedState(totalCount) {
+  if (totalCount <= LONG_DISPATCH_LIST_THRESHOLD) {
+    return {}
+  }
+
+  return {
+    r: true
+  }
+}
+
+function hasCollapsedOverride(collapsedState, groupKey) {
+  return Object.prototype.hasOwnProperty.call(collapsedState || {}, groupKey)
+}
+
+function buildGroupedDispatchSurvivors(survivors, collapsedState, selectedSurvivorId) {
+  const groupsByKey = {}
+  const totalCount = survivors.length
+  const defaultCollapsed = getDefaultCollapsedState(totalCount)
+  const selectedId = Number(selectedSurvivorId)
+
+  survivors.forEach((survivor) => {
+    const groupKey = getRarityGroupKey(survivor.rarity)
+
+    if (!groupsByKey[groupKey]) {
+      groupsByKey[groupKey] = []
+    }
+
+    groupsByKey[groupKey].push(survivor)
+  })
+
+  return RARITY_GROUP_ORDER.map((groupKey) => {
+    const groupSurvivors = (groupsByKey[groupKey] || []).slice().sort(sortSurvivorsForDispatch)
+
+    if (!groupSurvivors.length) {
+      return null
+    }
+
+    const collapsedOverridden = hasCollapsedOverride(collapsedState, groupKey)
+    let collapsed = collapsedOverridden ? Boolean(collapsedState[groupKey]) : Boolean(defaultCollapsed[groupKey])
+    const selectedSurvivor = groupSurvivors.find((survivor) => Number(survivor.id) === selectedId)
+
+    if (selectedSurvivor && !collapsedOverridden) {
+      collapsed = false
+    }
+
+    const dispatchableCount = groupSurvivors.filter((survivor) => !survivor.unavailable).length
+    const meta = RARITY_GROUP_META[groupKey] || RARITY_GROUP_META.unknown
+
+    return {
+      key: groupKey,
+      label: meta.label,
+      shortLabel: meta.shortLabel,
+      count: groupSurvivors.length,
+      dispatchableCount,
+      summaryText: `${dispatchableCount} 可派遣 / 共 ${groupSurvivors.length}`,
+      collapsed,
+      toggleText: collapsed ? "展开" : "收起",
+      toggleIndicator: collapsed ? "＋" : "－",
+      selectedInGroup: Boolean(selectedSurvivor),
+      selectedSummary: selectedSurvivor ? `已选：${selectedSurvivor.name}` : "",
+      groupClass: `dispatch-group dispatch-group--${groupKey}${collapsed ? " dispatch-group--collapsed" : ""}`,
+      survivors: groupSurvivors
+    }
+  }).filter(Boolean)
 }
 
 function formatState(fatigue, health) {
@@ -375,6 +517,7 @@ function formatSurvivor(row) {
     name: row.name,
     rarity: getRarityLabel(row.rarity),
     rarityKey,
+    rarityGroupKey: getRarityGroupKey(row.rarity),
     rarityBadgeClass: `survivor-tag survivor-rarity-tag survivor-rarity-tag--${rarityKey}`,
     selectedPanelClass: `survivor-card survivor-card--featured survivor-card--${rarityKey}${unavailable ? " survivor-card--unavailable" : ""}`,
     role: row.role,
@@ -402,19 +545,29 @@ function formatSurvivor(row) {
   return Object.assign(survivorData, buildRiskHint(survivorData))
 }
 
-function applySurvivorSelection(survivors, selectedSurvivorId) {
+function applySurvivorSelection(survivors, selectedSurvivorId, collapsedState) {
   if (!survivors.length) {
     return {
       survivors: [],
+      survivorGroups: [],
       selectedSurvivorId: null,
       selectedSurvivor: null
     }
   }
 
-  const firstAssignable = survivors.find((survivor) => !survivor.unavailable)
-  const fallbackId = (firstAssignable || survivors[0]).id
-  const selectedId = Number(selectedSurvivorId || fallbackId)
+  const defaultSortedSurvivors = survivors.slice().sort(sortSurvivorsForDefaultSelection)
+  const firstAssignable = defaultSortedSurvivors.find((survivor) => !survivor.unavailable)
+  const fallbackId = (firstAssignable || defaultSortedSurvivors[0]).id
+  let selectedId = Number(selectedSurvivorId)
   let selectedSurvivor = null
+
+  if (
+    !selectedSurvivorId ||
+    isNaN(selectedId) ||
+    !survivors.some((survivor) => Number(survivor.id) === selectedId)
+  ) {
+    selectedId = Number(fallbackId)
+  }
 
   const markedSurvivors = survivors.map((survivor) => {
     const selected = Number(survivor.id) === selectedId
@@ -433,6 +586,11 @@ function applySurvivorSelection(survivors, selectedSurvivorId) {
 
   return {
     survivors: markedSurvivors,
+    survivorGroups: buildGroupedDispatchSurvivors(
+      markedSurvivors,
+      collapsedState || {},
+      selectedSurvivor ? selectedSurvivor.id : null
+    ),
     selectedSurvivorId: selectedSurvivor ? selectedSurvivor.id : null,
     selectedSurvivor
   }
@@ -657,6 +815,8 @@ Page({
     actionBlocked: false,
     actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
     survivors: [],
+    survivorGroups: [],
+    rarityGroupCollapsed: {},
     selectedSurvivorId: null,
     selectedSurvivor: null,
     dutyTypes: buildDutyOptions(),
@@ -696,6 +856,8 @@ Page({
       actionBlocked: false,
       actionBlockMessage: ACTION_EXHAUSTED_MESSAGE,
       survivors: [],
+      survivorGroups: [],
+      rarityGroupCollapsed: {},
       selectedSurvivorId: null,
       selectedSurvivor: null,
       dutyResult: null,
@@ -764,7 +926,8 @@ Page({
         if (res.statusCode === 200 && Array.isArray(res.data)) {
           const selection = applySurvivorSelection(
             res.data.map(formatSurvivor),
-            this.data.selectedSurvivorId
+            this.data.selectedSurvivorId,
+            this.data.rarityGroupCollapsed
           )
 
           this.setData(selection)
@@ -789,9 +952,35 @@ Page({
 
   selectSurvivor(event) {
     const survivorId = event.currentTarget.dataset.survivorId
-    const selection = applySurvivorSelection(this.data.survivors, survivorId)
+    const selection = applySurvivorSelection(
+      this.data.survivors,
+      survivorId,
+      this.data.rarityGroupCollapsed
+    )
 
     this.setData(selection)
+  },
+
+  toggleRarityGroup(event) {
+    const groupKey = event.currentTarget.dataset.groupKey
+    const group = this.data.survivorGroups.find((item) => item.key === groupKey)
+
+    if (!group) {
+      return
+    }
+
+    const rarityGroupCollapsed = Object.assign({}, this.data.rarityGroupCollapsed, {
+      [groupKey]: !group.collapsed
+    })
+
+    this.setData({
+      rarityGroupCollapsed,
+      survivorGroups: buildGroupedDispatchSurvivors(
+        this.data.survivors,
+        rarityGroupCollapsed,
+        this.data.selectedSurvivorId
+      )
+    })
   },
 
   assignDuty(event) {

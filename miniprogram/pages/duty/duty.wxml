@@ -58,47 +58,67 @@
     <view wx:if="{{loadingSurvivors}}" class="card">
       <text class="muted">幸存者加载中...</text>
     </view>
-    <block wx:elif="{{survivors.length}}">
-      <view
-        wx:for="{{survivors}}"
-        wx:for-item="survivor"
-        wx:key="id"
-        class="{{survivor.cardClass}}"
-        hover-class="survivor-card--hover"
-        hover-stay-time="80"
-        data-survivor-id="{{survivor.id}}"
-        bindtap="selectSurvivor"
-      >
-        <text wx:if="{{survivor.selected}}" class="selected-ribbon">已选择</text>
-        <view class="survivor-identity-row">
-          <view class="{{survivor.portraitFrameClass}} survivor-portrait--compact">
-            <image wx:if="{{survivor.hasPortrait}}" class="survivor-portrait-image" src="{{survivor.portraitPath}}" mode="aspectFill"></image>
-            <text wx:else class="{{survivor.portraitFallbackClass}}">{{survivor.portraitFallbackText}}</text>
+    <block wx:elif="{{survivorGroups.length}}">
+      <view wx:for="{{survivorGroups}}" wx:for-item="group" wx:key="key" class="{{group.groupClass}}">
+        <view
+          class="dispatch-group-header"
+          hover-class="dispatch-group-header--active"
+          hover-stay-time="80"
+          data-group-key="{{group.key}}"
+          bindtap="toggleRarityGroup"
+        >
+          <view class="dispatch-group-title-wrap">
+            <text class="dispatch-group-title">{{group.label}}</text>
+            <text wx:if="{{group.selectedInGroup}}" class="dispatch-group-selected">{{group.selectedSummary}}</text>
           </view>
-          <view class="survivor-identity-main">
-            <text class="survivor-display-name">{{survivor.name}}</text>
-            <view class="survivor-tag-row">
-              <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
-              <text class="survivor-tag survivor-role-tag">{{survivor.role}}</text>
+          <view class="dispatch-group-meta">
+            <text class="dispatch-group-count">{{group.summaryText}}</text>
+            <text class="dispatch-group-toggle">{{group.toggleText}} {{group.toggleIndicator}}</text>
+          </view>
+        </view>
+        <view wx:if="{{!group.collapsed}}" class="dispatch-roster-list">
+          <view
+            wx:for="{{group.survivors}}"
+            wx:for-item="survivor"
+            wx:key="id"
+            class="{{survivor.cardClass}}"
+            hover-class="survivor-card--hover"
+            hover-stay-time="80"
+            data-survivor-id="{{survivor.id}}"
+            bindtap="selectSurvivor"
+          >
+            <text wx:if="{{survivor.selected}}" class="selected-ribbon">已选择</text>
+            <view class="survivor-identity-row">
+              <view class="{{survivor.portraitFrameClass}} survivor-portrait--compact">
+                <image wx:if="{{survivor.hasPortrait}}" class="survivor-portrait-image" src="{{survivor.portraitPath}}" mode="aspectFill"></image>
+                <text wx:else class="{{survivor.portraitFallbackClass}}">{{survivor.portraitFallbackText}}</text>
+              </view>
+              <view class="survivor-identity-main">
+                <text class="survivor-display-name">{{survivor.name}}</text>
+                <view class="survivor-tag-row">
+                  <text class="{{survivor.rarityBadgeClass}}">{{survivor.rarity}}</text>
+                  <text class="survivor-tag survivor-role-tag">{{survivor.role}}</text>
+                </view>
+              </view>
+              <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
             </view>
+            <view wx:if="{{survivor.traitLabel}}" class="trait-callout trait-callout--compact">
+              <text class="trait-kicker">特质</text>
+              <text class="trait-value">{{survivor.traitLabel}}</text>
+            </view>
+            <view class="state-panel state-panel--compact">
+              <view class="state-row">
+                <text class="state-label">疲劳</text>
+                <text class="{{survivor.fatigueClass}}">{{survivor.fatigue}}</text>
+              </view>
+              <view class="state-row">
+                <text class="state-label">健康</text>
+                <text class="{{survivor.healthClass}}">{{survivor.health}}</text>
+              </view>
+            </view>
+            <text wx:if="{{survivor.statusNote}}" class="survivor-note survivor-note--danger">{{survivor.statusNote}}</text>
           </view>
-          <text class="{{survivor.stateTagClass}}">{{survivor.stateTag}}</text>
         </view>
-        <view wx:if="{{survivor.traitLabel}}" class="trait-callout trait-callout--compact">
-          <text class="trait-kicker">特质</text>
-          <text class="trait-value">{{survivor.traitLabel}}</text>
-        </view>
-        <view class="state-panel state-panel--compact">
-          <view class="state-row">
-            <text class="state-label">疲劳</text>
-            <text class="{{survivor.fatigueClass}}">{{survivor.fatigue}}</text>
-          </view>
-          <view class="state-row">
-            <text class="state-label">健康</text>
-            <text class="{{survivor.healthClass}}">{{survivor.health}}</text>
-          </view>
-        </view>
-        <text wx:if="{{survivor.statusNote}}" class="survivor-note survivor-note--danger">{{survivor.statusNote}}</text>
       </view>
     </block>
     <view wx:else class="card">
