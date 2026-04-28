@@ -1,10 +1,10 @@
-# Web Demo Notes
+# Web Demo 说明
 
 ## 为什么需要 Web Demo
 
 主项目是微信小程序 + Flask + SQLite 原型。Web Demo 的作用是降低作品集评审门槛，让没有微信开发者工具或本地后端环境的人，也能在浏览器里快速看到核心循环和视觉方向。
 
-它不是替代主项目，也不是新的游戏版本。README 中的 Quick Preview 指向的是这个轻量浏览器预览。
+它不是替代主项目，也不是新的游戏版本。README 的“快速预览”指向的是这个轻量浏览器预览。
 
 ## Web Demo 包含什么
 
@@ -23,10 +23,10 @@
 页面复用了现有素材：
 
 - 幸存者头像
-- duty icons
+- 值勤图标
 - `shelter_home.png`
 - `emergency_supply.png`
-- random event illustrations
+- 随机事件插图
 
 ## Web Demo 不包含什么
 
@@ -36,7 +36,7 @@ Web Demo 不包含：
 - SQLite 数据读写
 - 微信小程序运行环境
 - 后端真实结算逻辑
-- 数据库 schema 迁移
+- 数据库结构迁移
 - LLM 功能
 - 新商业化系统
 - 完整游戏进度系统
@@ -47,7 +47,7 @@ Web Demo 不包含：
 
 小程序主实现负责真实原型流程：
 
-- onboarding
+- 开局登记流程
 - 招募接口
 - 值勤接口
 - 资源和幸存者状态结算
@@ -59,7 +59,7 @@ Web Demo 只提供浏览器预览：
 - 用静态数组模拟幸存者、值勤和事件
 - 用前端状态模拟资源和日志
 - 使用已有素材保持视觉一致
-- 不影响任何后端或小程序 gameplay 逻辑
+- 不影响任何后端或小程序玩法逻辑
 
 ## 本地预览方式
 
@@ -102,7 +102,7 @@ https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
 
 README 应明确区分：
 
-- Web Demo：静态、浏览器友好、mock state、快速预览。
+- Web Demo：静态、浏览器友好、静态模拟状态、快速预览。
 - Mini Program：主实现，连接 Flask + SQLite，包含实际项目逻辑。
 
-如果后续 Web Demo 行为改变，需要同步更新 README 的 Quick Preview 和本说明文档。
+如果后续 Web Demo 行为改变，需要同步更新 README 的“快速预览”和本说明文档。

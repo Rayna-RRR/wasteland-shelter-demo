@@ -123,7 +123,7 @@ const state = {
   actionCount: 0,
   recruitIndex: 1,
   logs: [
-    { type: "系统", text: "浏览器预览已载入，当前状态为静态前端模拟。" }
+    { type: "系统", text: "记录台已启动，当前为静态预览演练。" }
   ]
 }
 
@@ -436,7 +436,7 @@ function renderPressure() {
       <span class="pressure-title">${emergencyOffer.title}</span>
       <p class="pressure-copy">${emergencyOffer.copy}</p>
       <div class="pressure-actions">
-        <button class="small-button" type="button" data-action="claim-offer">启用协议</button>
+        <button class="small-button" type="button" data-action="claim-offer">启用补给</button>
         <button class="small-button secondary" type="button" data-action="close-offer">暂缓处理</button>
       </div>
     </div>
@@ -500,11 +500,11 @@ function recruitSurvivor() {
 
   if (alreadyOwned) {
     state.resources.materials += 6
-    state.logs.unshift({ type: "招募", text: `${next.name}重复登记，转化为维修材料 +6。` })
+    state.logs.unshift({ type: "招募", text: `${next.name}重复登记，已折算为维修材料 +6。` })
   } else {
     state.survivors.push(Object.assign({}, next))
     state.selectedSurvivorId = next.id
-    state.logs.unshift({ type: "招募", text: `${next.name}加入避难所。` })
+    state.logs.unshift({ type: "招募", text: `登记完成：${next.name}加入避难所值勤名单。` })
   }
 
   state.recruitIndex += 1
@@ -537,7 +537,7 @@ function assignDuty() {
     severity,
     nextHint: getNextHint(duty.resourceDelta, duty.stateDelta, survivor)
   }
-  state.logs.unshift({ type: "值勤", text: `${survivor.name}执行${duty.label}，结果：${severity.label}。` })
+  state.logs.unshift({ type: "值勤", text: `${survivor.name}完成${duty.label}，记录状态：${severity.label}。` })
   updatePressureAfterDuty()
   renderAll()
 }
@@ -547,14 +547,14 @@ function updatePressureAfterDuty() {
 
   if (pressureState.tone === "danger" || state.actionCount >= 3) {
     state.pressure = { kind: "offer" }
-    state.logs.unshift({ type: "补给", text: "检测到资源或队伍压力，应急补给协议开放。" })
+    state.logs.unshift({ type: "补给", text: "资源或队伍压力达到阈值，应急补给协议开放。" })
     return
   }
 
   if (state.actionCount >= 1) {
     const event = events[(state.actionCount - 1) % events.length]
     state.pressure = Object.assign({ kind: "event" }, event)
-    state.logs.unshift({ type: "事件", text: `${event.title}出现，等待处理。` })
+    state.logs.unshift({ type: "事件", text: `${event.title}触发，等待值班长处理。` })
   }
 }
 
@@ -592,7 +592,7 @@ function claimOffer() {
 }
 
 function closeOffer() {
-  state.logs.unshift({ type: "补给", text: "玩家暂缓处理应急补给协议。" })
+  state.logs.unshift({ type: "补给", text: "指挥官暂缓启用应急补给协议。" })
   state.pressure = null
   renderAll()
 }
@@ -606,7 +606,7 @@ function resetDemo() {
   state.pressure = null
   state.actionCount = 0
   state.recruitIndex = 1
-  state.logs = [{ type: "系统", text: "浏览器预览已重置。" }]
+  state.logs = [{ type: "系统", text: "预览记录已清空，避难所状态回到初始演练。" }]
   renderAll()
 }
 
