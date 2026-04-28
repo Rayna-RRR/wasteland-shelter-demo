@@ -173,33 +173,69 @@ http://localhost:5001
 
 ---
 
-## 截图与演示素材
+## 截图与演示预览
 
-以下位置预留给作品集截图或录屏动图：
+以下截图按项目核心循环排列，便于快速浏览作品集演示重点。
 
-### 首页
+### 入口 / 初始化
 
-> TODO: 添加首页资源与幸存者概览截图。
+![入口与初始化](docs/assets/screenshots/01_init_entry.png)
+
+展示进入主循环前的避难所登记与初始化状态。
+
+### 首页事件概览
+
+![首页事件概览](docs/assets/screenshots/02_home_event_overview.png)
+
+展示第 3 天避难所状态、待处理事件、事件插图、玩家选择和当前轮次信息。
+
+### 首页资源状态
+
+![首页资源状态](docs/assets/screenshots/03_home_resources.png)
+
+展示当前资源与压力背景，说明值勤和应急补给决策的来源。
+
+### 首页队伍名单
+
+![首页队伍名单](docs/assets/screenshots/04_home_team_roster.png)
+
+展示幸存者头像、稀有度、职业、疲劳、健康和可值勤状态。
+
+### 招募结果
+
+![招募结果](docs/assets/screenshots/05_recruit_result.png)
+
+展示幸存者招募反馈，包括头像、稀有度、职业和结果提示。
 
 ### 值勤派遣
 
-> TODO: 添加值勤派遣、稀有度分组和 duty icons 截图。
+![值勤派遣](docs/assets/screenshots/06_duty_dispatch.png)
+
+展示按稀有度分组的幸存者列表、选中角色详情、派遣判断和队伍状态反馈。
 
 ### 值勤结果
 
-> TODO: 添加值勤结果、资源变化、疲劳 / 健康变化和下一步建议截图。
+![值勤结果](docs/assets/screenshots/07_duty_result.png)
+
+展示派遣后的结果报告，包括幸存者状态变化、资源变化、严重度、下一步建议和日结反馈。
 
 ### 应急补给
 
-> TODO: 添加压力触发的应急补给协议截图。
+![应急补给](docs/assets/screenshots/08_emergency_offer.png)
 
-### 日志
+展示由压力触发的应急补给协议，包括压力来源、资源支援、队伍恢复和玩家响应选项。
 
-> TODO: 添加招募 / 值勤 / 补给日志截图。
+### 日志概览
+
+![日志概览](docs/assets/screenshots/09_logs_overview.png)
+
+展示招募、值勤和应急补给日志，让玩家操作和系统触发行为可回看。
 
 ### 浏览器预览版
 
-> TODO: 添加浏览器静态预览截图。
+![浏览器预览版](docs/assets/screenshots/10_web_demo_preview.png)
+
+展示静态浏览器预览，便于不打开微信开发者工具也能快速查看项目效果。
 
 ---
 
