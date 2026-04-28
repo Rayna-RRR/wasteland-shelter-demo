@@ -127,6 +127,84 @@ LOCAL_DEMO_GACHA_SEQUENCE = [
     {"rarity": "SSR", "name": "周萤"}
 ]
 DEMO_MODE_ENABLED = False
+RECORDING_MODE_DIFFICULTY = "标准"
+RECORDING_MODE_CURRENT_DAY = 3
+RECORDING_MODE_ACTIONS_LEFT = 2
+RECORDING_MODE_PENDING_EVENT_ID = "battery_cache_v1"
+RECORDING_MODE_RESOURCES = {
+    "food": 68,
+    "power": 63,
+    "materials": 27,
+    "premium_currency": 8
+}
+RECORDING_MODE_SURVIVORS = [
+    {
+        "name": "周萤",
+        "rarity": "SSR",
+        "role": "维修员",
+        "mood": "cold",
+        "fatigue": 62,
+        "health": 84
+    },
+    {
+        "name": "林七",
+        "rarity": "SR",
+        "role": "采集员",
+        "mood": "steady",
+        "fatigue": 76,
+        "health": 72
+    },
+    {
+        "name": "小五",
+        "rarity": "R",
+        "role": "杂务员",
+        "mood": "normal",
+        "fatigue": 38,
+        "health": 92
+    },
+    {
+        "name": "唐鸦",
+        "rarity": "SSR",
+        "role": "守卫",
+        "mood": "alert",
+        "fatigue": 82,
+        "health": 66
+    }
+]
+RECORDING_MODE_DUTY_LOGS = [
+    {
+        "survivor_name": "周萤",
+        "duty_type": "generate_power",
+        "result_text": "周萤完成发电维护，旧电表短时稳定，过滤系统重新供电。",
+        "food_change": -1,
+        "power_change": 9,
+        "materials_change": -2
+    },
+    {
+        "survivor_name": "林七",
+        "duty_type": "scavenge",
+        "result_text": "林七沿废墟边线完成搜集，带回可修复零件和少量口粮。",
+        "food_change": 4,
+        "power_change": -2,
+        "materials_change": 8
+    },
+    {
+        "survivor_name": "小五",
+        "duty_type": "cook",
+        "result_text": "小五整理灶台和库存，今日口粮配给压力下降。",
+        "food_change": 8,
+        "power_change": -1,
+        "materials_change": 0
+    },
+    {
+        "survivor_name": "唐鸦",
+        "duty_type": "guard",
+        "result_text": "唐鸦完成边门夜巡，顺手回收一批路障材料，但疲劳继续累积。",
+        "food_change": -2,
+        "power_change": -1,
+        "materials_change": 3
+    }
+]
 DUTY_OPERATING_COSTS = {
     "scavenge": {
         "food": 0,
@@ -1286,6 +1364,184 @@ def reset_current_run_state(conn):
         """
     )
     return deleted_counts
+
+
+def insert_recording_mode_survivors(conn):
+    ensure_survivor_state_columns(conn)
+    seeded_survivors = []
+
+    for survivor in RECORDING_MODE_SURVIVORS:
+        cursor = conn.execute(
+            """
+            INSERT INTO survivors (
+                name, rarity, role, mood, fatigue, health,
+                status, available_on_day, leave_reason, owned
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 'active', 1, '', 1)
+            """,
+            (
+                survivor["name"],
+                survivor["rarity"],
+                survivor["role"],
+                survivor["mood"],
+                survivor["fatigue"],
+                survivor["health"]
+            )
+        )
+        seeded_survivors.append({
+            "id": cursor.lastrowid,
+            **survivor
+        })
+
+    return seeded_survivors
+
+
+def insert_recording_mode_gacha_logs(conn, survivors):
+    for survivor in survivors:
+        conn.execute(
+            """
+            INSERT INTO gacha_logs (survivor_name, rarity, role)
+            VALUES (?, ?, ?)
+            """,
+            (
+                survivor["name"],
+                survivor["rarity"],
+                survivor["role"]
+            )
+        )
+
+
+def insert_recording_mode_duty_logs(conn):
+    for log in RECORDING_MODE_DUTY_LOGS:
+        conn.execute(
+            """
+            INSERT INTO duty_logs (
+                survivor_name,
+                duty_type,
+                result_text,
+                food_change,
+                power_change,
+                materials_change
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                log["survivor_name"],
+                log["duty_type"],
+                log["result_text"],
+                log["food_change"],
+                log["power_change"],
+                log["materials_change"]
+            )
+        )
+
+
+def build_recording_mode_event_payload():
+    event_def = get_event_definition(RECORDING_MODE_PENDING_EVENT_ID)
+
+    if not event_def:
+        return None, ""
+
+    payload = build_pending_event_storage_payload(
+        event_def,
+        RECORDING_MODE_CURRENT_DAY,
+        None
+    )
+    return event_def["id"], dumps_compact_json(payload)
+
+
+def seed_recording_mode_run_state(conn):
+    run_state = create_current_run(
+        conn,
+        RECORDING_MODE_DIFFICULTY,
+        count_as_new_run=False
+    )
+    total_days = run_state["total_days"]
+    threat_days_left = max(total_days - (RECORDING_MODE_CURRENT_DAY - 1), 0)
+    pending_event_id, pending_event_payload = build_recording_mode_event_payload()
+    settlement_summary = {
+        "settled_day": RECORDING_MODE_CURRENT_DAY - 1,
+        "result": "advanced",
+        "next_day": RECORDING_MODE_CURRENT_DAY
+    }
+
+    conn.execute(
+        """
+        UPDATE run_state
+        SET current_day = ?,
+            actions_left = ?,
+            threat_days_left = ?,
+            pending_event_id = ?,
+            pending_event_payload = ?,
+            offer_suppressed_until_day = 0,
+            result = NULL,
+            last_settlement_summary = ?
+        WHERE id = ?
+        """,
+        (
+            RECORDING_MODE_CURRENT_DAY,
+            RECORDING_MODE_ACTIONS_LEFT,
+            threat_days_left,
+            pending_event_id,
+            pending_event_payload,
+            dumps_compact_json(settlement_summary),
+            CURRENT_RUN_ID
+        )
+    )
+    return read_current_run(conn)
+
+
+def seed_recording_mode_state(conn):
+    deleted_counts = reset_current_run_state(conn)
+    ensure_offer_log_columns(conn)
+
+    conn.execute(
+        """
+        UPDATE player
+        SET food = ?,
+            power = ?,
+            materials = ?,
+            premium_currency = ?,
+            initialized = 1,
+            shelter_code = 'REC-03',
+            commander_name = '录制指挥官',
+            difficulty = ?
+        WHERE id = 1
+        """,
+        (
+            RECORDING_MODE_RESOURCES["food"],
+            RECORDING_MODE_RESOURCES["power"],
+            RECORDING_MODE_RESOURCES["materials"],
+            RECORDING_MODE_RESOURCES["premium_currency"],
+            RECORDING_MODE_DIFFICULTY
+        )
+    )
+
+    survivors = insert_recording_mode_survivors(conn)
+    insert_recording_mode_gacha_logs(conn, survivors)
+    insert_recording_mode_duty_logs(conn)
+    run_state = seed_recording_mode_run_state(conn)
+
+    offer_context = get_emergency_offer_context(conn)
+    if offer_context["active"]:
+        log_offer_event(conn, "exposed", offer_context)
+        offer_context = get_emergency_offer_context(conn)
+
+    resources = build_resource_payload(offer_context["player"])
+
+    return {
+        "deleted": deleted_counts,
+        "resources": resources,
+        "survivors": survivors,
+        "run_state": serialize_run_state(run_state),
+        "offer_active": offer_context["active"],
+        "offer_trigger_reason": offer_context["trigger_reason"],
+        "seeded_logs": {
+            "gacha": len(survivors),
+            "duty": len(RECORDING_MODE_DUTY_LOGS),
+            "offer": 1 if offer_context["active"] else 0
+        }
+    }
 
 
 def clamp_resource_value(value):
@@ -2766,7 +3022,24 @@ def dev_demo_mode():
 
     if request.method == "POST":
         payload = request.get_json(silent=True) or {}
-        DEMO_MODE_ENABLED = bool(payload.get("enabled"))
+        if "enabled" in payload:
+            DEMO_MODE_ENABLED = bool(payload.get("enabled"))
+
+        if payload.get("recording_seed"):
+            DEMO_MODE_ENABLED = False
+            conn = get_db_connection()
+            recording_state = seed_recording_mode_state(conn)
+            conn.commit()
+            conn.close()
+
+            return jsonify({
+                "status": "ok",
+                "enabled": DEMO_MODE_ENABLED,
+                "mode": "recording_seed",
+                "message": "本地录制状态已准备。",
+                "scripted_sequence": LOCAL_DEMO_GACHA_SEQUENCE,
+                **recording_state
+            })
 
     return jsonify({
         "status": "ok",
