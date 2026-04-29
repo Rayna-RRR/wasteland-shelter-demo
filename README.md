@@ -126,13 +126,24 @@ cp miniprogram/project.private.config.example.json miniprogram/project.private.c
 
 不要把真实 AppID、AppSecret、token、云开发环境 ID 或其他密钥提交到公开仓库。`project.private.config.json` 已加入 `.gitignore`，用于存放微信开发者工具的本地私有配置。
 
+#### 后端本地启动
+
+以下命令都在仓库根目录运行。第一次启动后端前，先创建虚拟环境并安装依赖：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+```
+
 初始化或修复本地 SQLite 数据库：
 
 ```bash
 python backend/init_db.py
 ```
 
-启动 Flask 后端：
+启动 Flask 后端服务：
 
 ```bash
 python backend/app.py
