@@ -123,7 +123,7 @@ const state = {
   actionCount: 0,
   recruitIndex: 1,
   logs: [
-    { type: "系统", text: "记录台已启动，当前为静态预览演练。" }
+    { type: "系统", text: "记录台已启动：当前是静态浏览器预览，不连接后端。" }
   ]
 }
 
@@ -406,7 +406,7 @@ function renderPressure() {
     type.className = "status-badge"
     type.textContent = "待命"
     card.className = "empty-state"
-    card.textContent = "连续值勤或资源压力上升后，会出现随机事件或应急补给预览。"
+    card.textContent = "执行值勤后先观察随机事件；连续行动或资源压力上升后，会出现应急补给预览。"
     return
   }
 
@@ -606,7 +606,7 @@ function resetDemo() {
   state.pressure = null
   state.actionCount = 0
   state.recruitIndex = 1
-  state.logs = [{ type: "系统", text: "预览记录已清空，避难所状态回到初始演练。" }]
+  state.logs = [{ type: "系统", text: "预览记录已清空：静态浏览器预览回到初始演练。" }]
   renderAll()
 }
 

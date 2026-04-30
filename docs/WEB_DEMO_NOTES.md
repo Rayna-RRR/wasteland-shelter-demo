@@ -6,6 +6,12 @@
 
 它不是替代主项目，也不是新的游戏版本。README 的“快速预览”指向的是这个轻量浏览器预览。
 
+它面向的第一目标是帮助面试官快速理解：
+
+```text
+招募 -> 值勤 -> 资源 / 状态变化 -> 随机事件 -> 应急补给 -> 日志
+```
+
 ## Web Demo 包含什么
 
 `web-demo/` 是一个轻量静态页面，包含：
@@ -19,6 +25,7 @@
 - 应急补给预览
 - 简化日志记录
 - Web Demo 与主小程序实现的区别提示
+- “60 秒查看路径”和核心循环提示
 
 页面复用了现有素材：
 
@@ -40,6 +47,8 @@ Web Demo 不包含：
 - LLM 功能
 - 新商业化系统
 - 完整游戏进度系统
+- 真实支付
+- 生产级 AI / LLM 运行时
 
 所有状态都在 `web-demo/app.js` 里静态模拟，刷新页面会回到初始预览状态。
 
@@ -81,6 +90,14 @@ python3 -m http.server 8080
 http://localhost:8080/web-demo/
 ```
 
+建议 60 秒查看路径：
+
+1. 点击“招募幸存者”。
+2. 选择幸存者和值勤任务，点击“派遣值勤”。
+3. 查看值勤结果里的资源、疲劳和健康变化。
+4. 查看“事件 / 补给”面板。
+5. 处理事件或补给后查看“日志”。
+
 ## GitHub Pages 部署说明
 
 后续可以在 GitHub 仓库设置中启用 Pages：
@@ -97,6 +114,12 @@ https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
 ```
 
 部署前需要确认 `web-demo/` 和 `miniprogram/assets/images/` 都已经提交，因为 Web Demo 通过相对路径复用这些素材。
+
+如果 GitHub 用户名或仓库名不同，访问路径应替换为：
+
+```text
+https://<your-github-username>.github.io/<repo-name>/web-demo/
+```
 
 ## README 对齐说明
 

@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="background-layer" aria-hidden="true">
-      <img src="../miniprogram/assets/images/backgrounds/shelter_home.png" alt="" data-fallback="避难所背景">
+      <img src="../miniprogram/assets/images/backgrounds/shelter_home.png" alt="" data-fallback="避难所背景" onerror="this.classList.add('is-hidden')">
       <div class="background-shade"></div>
     </div>
 
@@ -17,8 +17,38 @@
         <p class="eyebrow">浏览器预览版</p>
         <h1>废土避难所值勤管理器</h1>
         <p class="subtitle">招募幸存者 → 派遣值勤 → 资源变化 → 队伍状态变化 → 事件 / 应急补给 → 日志记录</p>
-        <p class="preview-note">此 Web Demo 是轻量浏览器预览版，主项目实现为微信小程序 + Flask + SQLite。</p>
+        <p class="preview-note">此 Web Demo 是轻量浏览器预览版，用静态前端状态演示核心循环；完整主实现是微信小程序 + Flask + SQLite，不包含真实后端、真实支付或生产级 AI / LLM 运行时。</p>
       </header>
+
+      <section class="entry-guide" aria-labelledby="quick-try-title">
+        <div class="guide-copy">
+          <p class="section-kicker">60 秒查看路径</p>
+          <h2 id="quick-try-title">What to try in 60 seconds</h2>
+          <ol class="quick-steps">
+            <li>点击“招募幸存者”，查看队伍扩充和日志记录。</li>
+            <li>选择一名幸存者和一个值勤任务，点击“派遣值勤”。</li>
+            <li>查看“值勤结果”里的资源变化、疲劳 / 健康变化和下一步建议。</li>
+            <li>查看“事件 / 补给”：第一次值勤后会出现随机事件，连续行动或资源压力会出现应急补给。</li>
+            <li>处理事件或补给后，查看“日志”如何记录行为和结果。</li>
+          </ol>
+        </div>
+        <div class="loop-copy">
+          <p class="section-kicker">核心循环</p>
+          <div class="loop-strip" aria-label="核心循环">
+            <span>招募</span>
+            <span>值勤</span>
+            <span>资源 / 状态</span>
+            <span>随机事件</span>
+            <span>应急补给</span>
+            <span>日志</span>
+          </div>
+          <div class="jump-row" aria-label="快速定位">
+            <a href="#pressurePanel">找事件 / 补给</a>
+            <a href="#logPanel">看日志</a>
+            <a href="#duty-title">派遣值勤</a>
+          </div>
+        </div>
+      </section>
 
       <section class="grid-layout">
         <section class="panel resources-panel" aria-labelledby="resources-title">
@@ -75,10 +105,10 @@
             </div>
             <span id="pressureType" class="status-badge">待命</span>
           </div>
-          <div id="pressureCard" class="empty-state">连续值勤或资源压力上升后，会出现随机事件或应急补给预览。</div>
+          <div id="pressureCard" class="empty-state">执行值勤后先观察随机事件；连续行动或资源压力上升后，会出现应急补给预览。</div>
         </section>
 
-        <section class="panel log-panel" aria-labelledby="log-title">
+        <section id="logPanel" class="panel log-panel" aria-labelledby="log-title">
           <div class="section-heading">
             <div>
               <p class="section-kicker">行动记录</p>

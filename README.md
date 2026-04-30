@@ -14,15 +14,27 @@
 https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 ```
 
+说明：这是作品集用浏览器预览入口，用静态前端状态快速展示招募、值勤、资源 / 状态变化、随机事件、应急补给和日志。它不是完整微信小程序，也不连接 Flask / SQLite。
+
 快速浏览静态 Web Demo：
 
 ```bash
 open web-demo/index.html
 ```
 
-说明：GitHub Pages 根路径可能显示仓库 README；`/web-demo/` 才是可交互的浏览器预览页面。
+如果浏览器限制本地资源读取，可以在仓库根目录启动静态服务：
 
-Web Demo 是轻量浏览器预览，使用静态前端状态模拟核心循环；它不是完整实现，也不连接 Flask / SQLite。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
+```bash
+python3 -m http.server 8080
+```
+
+然后访问：
+
+```text
+http://localhost:8080/web-demo/
+```
+
+GitHub Pages 根路径可能显示仓库 README；`/web-demo/` 才是可交互的浏览器预览页面。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
 
 ---
 
