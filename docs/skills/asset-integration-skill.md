@@ -228,7 +228,7 @@ Existing duty keys must remain compatible with backend logic.
 
 ## Emergency Supply Image Rules
 
-The emergency supply image should support the monetization / pressure design.
+The emergency supply image should support the simulated emergency offer / pressure design.
 
 Recommended file:
 

@@ -38,7 +38,7 @@ For a game operations or R&D-support operations application, I wanted the projec
 - resource pressure
 - survivor state pressure
 - random event choices
-- monetization-style trigger design
+- simulated pressure-based emergency offer design
 - logs for review
 
 The goal was to show that I can think beyond UI screens and connect player actions with system outcomes.
@@ -93,11 +93,11 @@ More detail: [RANDOM_EVENTS.md](RANDOM_EVENTS.md)
 
 [Screenshot: Random event]
 
-## 5. Monetization / Emergency Offer Design
+## 5. Simulated Emergency Offer Design
 
 The emergency offer is a pressure-based rescue package.
 
-It is not a real payment system. The current price label is only a presentation placeholder for showing how a monetization trigger could connect to game pressure.
+It is not a real payment system. The current price label is only a presentation placeholder for showing how an emergency support prompt could connect to game pressure.
 
 The offer records three behavior states:
 
@@ -105,7 +105,7 @@ The offer records three behavior states:
 - `closed`: the player dismissed or postponed the offer.
 - `purchased`: the player chose to activate the offer.
 
-The design reason is simple: a commercial trigger is more meaningful when it is connected to player pressure.
+The design reason is simple: an offer-like prompt is more meaningful when it is connected to player pressure.
 
 Compared with a static shop button, a pressure-based offer is easier to review from an operations perspective:
 
@@ -202,7 +202,7 @@ System loop matters more than feature count.
 
 A small project becomes more useful when each feature affects another feature. Recruit, duty, resources, fatigue, health, event, offer, and logs are more meaningful together than as separate screens.
 
-Commercial trigger should be connected to player pressure.
+Offer-like prompts should be connected to player pressure.
 
 The emergency offer is more explainable when it appears because the player is under resource or team pressure. This is more useful than a static shop button for an operations case study.
 
@@ -250,4 +250,3 @@ The priority should remain:
 1. Keep the core loop stable.
 2. Make behavior and outcomes easier to review.
 3. Expand content only after the system remains understandable.
-
