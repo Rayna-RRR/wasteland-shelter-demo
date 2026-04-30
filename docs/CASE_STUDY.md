@@ -24,8 +24,9 @@ Reference docs:
 - [BALANCE_THRESHOLDS.md](BALANCE_THRESHOLDS.md)
 - [RANDOM_EVENTS.md](RANDOM_EVENTS.md)
 - [WEB_DEMO_NOTES.md](WEB_DEMO_NOTES.md)
+- [Open Web Demo](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
 
-[Screenshot: Home page]
+![Home page](assets/screenshots/02_home_event_overview.png)
 
 ## 2. Problem I wanted to solve
 
@@ -69,9 +70,9 @@ In the current prototype:
 
 The system is intentionally small, but the important part is that each action changes the next decision.
 
-[Screenshot: Recruit result]
+![Recruit result](assets/screenshots/05_recruit_result.png)
 
-[Screenshot: Duty assignment]
+![Duty assignment](assets/screenshots/06_duty_dispatch.png)
 
 ## 4. Random Event Design
 
@@ -91,7 +92,7 @@ The current event pool is demo-level. It is enough to show categories and conseq
 
 More detail: [RANDOM_EVENTS.md](RANDOM_EVENTS.md)
 
-[Screenshot: Random event]
+![Random event](assets/screenshots/02_home_event_overview.png)
 
 ## 5. Simulated Emergency Offer Design
 
@@ -119,7 +120,7 @@ Close suppression matters because the same offer should not interrupt the player
 
 More detail: [BALANCE_THRESHOLDS.md](BALANCE_THRESHOLDS.md) and [OPS_REVIEW.md](OPS_REVIEW.md)
 
-[Screenshot: Emergency offer]
+![Emergency offer](assets/screenshots/08_emergency_offer.png)
 
 ## 6. Logging and Review
 
@@ -147,7 +148,7 @@ Offer logs help review:
 
 For a game operations / R&D-support operations portfolio, this is important because it shows behavior tracking and outcome review, not only interface display.
 
-[Screenshot: Logs]
+![Logs](assets/screenshots/09_logs_overview.png)
 
 ## 7. What I implemented
 
@@ -194,7 +195,7 @@ Documentation and helper scripts:
 - `scripts/smoke_test_backend.py` for a lightweight backend smoke test.
 - `scripts/create_clean_zip.sh` for creating a safer portfolio archive.
 
-[Screenshot: Web Demo]
+![Web Demo](assets/screenshots/10_web_demo_preview.png)
 
 ## 8. What I learned
 

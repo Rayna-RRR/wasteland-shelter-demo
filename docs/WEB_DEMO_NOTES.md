@@ -6,6 +6,12 @@
 
 它不是替代主项目，也不是新的游戏版本。README 的“快速预览”指向的是这个轻量浏览器预览。
 
+在线预览地址：
+
+```text
+https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
+```
+
 它面向的第一目标是帮助面试官快速理解：
 
 ```text
@@ -110,7 +116,7 @@ http://localhost:8080/web-demo/
 6. 保存后访问：
 
 ```text
-https://Rayna-RRR.github.io/wasteland-shelter-demo/web-demo/
+https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 ```
 
 部署前需要确认 `web-demo/` 和 `miniprogram/assets/images/` 都已经提交，因为 Web Demo 通过相对路径复用这些素材。
