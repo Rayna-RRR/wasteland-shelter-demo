@@ -29,7 +29,11 @@ cd "$PROJECT_PARENT"
 find "$PROJECT_NAME" \
     \( -path "$PROJECT_NAME/.git" \
         -o -path "$PROJECT_NAME/.venv" \
-        -o -name "__pycache__" \) -type d -prune -o \
+        -o -name "__pycache__" \
+        -o -name "node_modules" \
+        -o -name ".pytest_cache" \
+        -o -name ".mypy_cache" \
+        -o -name ".ruff_cache" \) -type d -prune -o \
     \( -name ".DS_Store" \
         -o -path "$PROJECT_NAME/backend/data/*.db" \
         -o -path "$PROJECT_NAME/backend/data/*.db-*" \

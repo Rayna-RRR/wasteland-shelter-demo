@@ -13,6 +13,9 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "data", "game.db")
 EVENT_DEFINITIONS_PATH = os.path.join(BASE_DIR, "data", "event_definitions.json")
+EVENT_DEFINITIONS_CACHE_MTIME = None
+EVENT_DEFINITIONS_CACHE = []
+EVENT_DEFINITIONS_BY_ID_CACHE = {}
 
 SURVIVOR_POOL = {
     "SSR": [
@@ -809,27 +812,51 @@ def parse_compact_json_object(value):
 
 
 def load_event_definitions():
+    global EVENT_DEFINITIONS_CACHE_MTIME
+    global EVENT_DEFINITIONS_CACHE
+    global EVENT_DEFINITIONS_BY_ID_CACHE
+
+    try:
+        current_mtime = os.path.getmtime(EVENT_DEFINITIONS_PATH)
+    except OSError:
+        EVENT_DEFINITIONS_CACHE_MTIME = None
+        EVENT_DEFINITIONS_CACHE = []
+        EVENT_DEFINITIONS_BY_ID_CACHE = {}
+        return []
+
+    if EVENT_DEFINITIONS_CACHE_MTIME == current_mtime:
+        return EVENT_DEFINITIONS_CACHE
+
     try:
         with open(EVENT_DEFINITIONS_PATH, "r", encoding="utf-8") as file_obj:
             data = json.load(file_obj)
     except (OSError, ValueError):
+        EVENT_DEFINITIONS_CACHE_MTIME = current_mtime
+        EVENT_DEFINITIONS_CACHE = []
+        EVENT_DEFINITIONS_BY_ID_CACHE = {}
         return []
 
     events = data.get("events") if isinstance(data, dict) else data
     if not isinstance(events, list):
+        EVENT_DEFINITIONS_CACHE_MTIME = current_mtime
+        EVENT_DEFINITIONS_CACHE = []
+        EVENT_DEFINITIONS_BY_ID_CACHE = {}
         return []
 
-    return [
+    EVENT_DEFINITIONS_CACHE_MTIME = current_mtime
+    EVENT_DEFINITIONS_CACHE = [
         event for event in events
         if isinstance(event, dict) and event.get("id")
     ]
+    EVENT_DEFINITIONS_BY_ID_CACHE = {}
+    for event in EVENT_DEFINITIONS_CACHE:
+        EVENT_DEFINITIONS_BY_ID_CACHE.setdefault(event["id"], event)
+    return EVENT_DEFINITIONS_CACHE
 
 
 def get_event_definition(event_id):
-    for event in load_event_definitions():
-        if event.get("id") == event_id:
-            return event
-    return None
+    load_event_definitions()
+    return EVENT_DEFINITIONS_BY_ID_CACHE.get(event_id)
 
 
 def get_event_target_name(payload):
