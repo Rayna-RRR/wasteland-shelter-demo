@@ -1,253 +1,252 @@
-# Wasteland Shelter Duty Manager - Case Study
+# 废土避难所值勤管理器项目案例
 
-## 1. Project Overview
+## 1. 项目概览
 
-Project name: Wasteland Shelter Duty Manager / 废土避难所值勤管理器
+项目名称：废土避难所值勤管理器
 
-Role: Personal portfolio project
+项目类型：个人作品集项目
 
-Target role relevance: game operations / R&D-support operations internship
+目标岗位关联：游戏运营 / 研发支持运营实习
 
-Tech stack:
+技术栈：
 
-- Frontend: WeChat Mini Program
-- Backend: Python 3.9 + Flask + flask-cors
-- Database: SQLite
-- Browser preview: HTML / CSS / JavaScript in `web-demo/`
+- 前端：微信小程序
+- 后端：Python 3.9 + Flask + flask-cors
+- 数据库：SQLite
+- 浏览器预览：`web-demo/` 中的 HTML / CSS / JavaScript
 
-This project is a lightweight portfolio prototype, not a complete commercial game. The main implementation is the WeChat Mini Program + Flask + SQLite version. The Web Demo is only a low-friction browser preview for reviewers who may not have WeChat Developer Tools or a local backend environment.
+这是一个轻量作品集原型。主实现为微信小程序 + Flask + SQLite，浏览器预览版用于让评审在无微信开发者工具和本地后端环境时快速查看核心循环。
 
-Reference docs:
+参考文档：
 
 - [README.md](../README.md)
 - [OPS_REVIEW.md](OPS_REVIEW.md)
 - [BALANCE_THRESHOLDS.md](BALANCE_THRESHOLDS.md)
 - [RANDOM_EVENTS.md](RANDOM_EVENTS.md)
 - [WEB_DEMO_NOTES.md](WEB_DEMO_NOTES.md)
-- [Open Web Demo](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
+- [在线浏览器预览](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
 
-![Home page](assets/screenshots/02_home_event_overview.png)
+![首页](assets/screenshots/02_home_event_overview.png)
 
-## 2. Problem I wanted to solve
+## 2. 想解决的问题
 
-I did not want this resume project to be only a static dashboard.
+这个作品集项目需要展示一个可运行的小型系统循环，而非只展示静态界面。
 
-For a game operations or R&D-support operations application, I wanted the project to show a small but runnable system loop:
+面向游戏运营或研发支持运营岗位，项目重点展示：
 
-- rules
-- player actions
-- resource pressure
-- survivor state pressure
-- random event choices
-- simulated pressure-based emergency offer design
-- logs for review
+- 规则
+- 玩家操作
+- 资源压力
+- 幸存者状态压力
+- 随机事件选择
+- 基于压力的应急补给设计
+- 可复盘的日志记录
 
-The goal was to show that I can think beyond UI screens and connect player actions with system outcomes.
+目标是说明我能把玩家行为、系统反馈和后续复盘连接起来。
 
-## 3. Core Design
+## 3. 核心设计
 
-The core loop is:
+当前核心循环：
 
 ```text
-Recruit survivors
--> Assign duty
--> Resources change
--> Fatigue / health change
--> Random event may block actions until resolved
--> Emergency offer may be triggered
--> Logs are recorded for review
+招募幸存者
+-> 分配值勤
+-> 资源变化
+-> 疲劳 / 健康变化
+-> 随机事件可能阻断行动，等待玩家处理
+-> 压力满足条件时触发应急补给
+-> 日志记录行为和结果
 ```
 
-In the current prototype:
+当前原型中：
 
-- Recruit survivors: the player pulls survivors from a small gacha pool.
-- Assign duty: survivors can be assigned to scavenging, power generation, cooking, or guarding.
-- Resources change: food, power, materials, and recruit currency change after actions.
-- Fatigue / health change: repeated duty increases fatigue, and risky work may reduce health.
-- Random event: unresolved events can block actions until the player makes a choice.
-- Emergency offer: resource or team pressure can trigger a rescue-style offer.
-- Logs: gacha, duty, and offer actions are recorded for later review.
+- 招募幸存者：玩家从小型招募池中获得幸存者。
+- 分配值勤：幸存者可以执行搜集、发电、烹饪、守卫等任务。
+- 资源变化：行动后食物、电力、材料和招募券会变化。
+- 疲劳 / 健康变化：重复值勤会提高疲劳，高风险工作可能降低健康。
+- 随机事件：未处理事件会阻断行动，直到玩家做出选择。
+- 应急补给：资源或队伍压力可以触发救援式补给。
+- 日志：招募、值勤和补给行为会被记录，便于后续复盘。
 
-The system is intentionally small, but the important part is that each action changes the next decision.
+系统规模保持较小，重点是让每次操作影响下一步判断。
 
-![Recruit result](assets/screenshots/05_recruit_result.png)
+![招募结果](assets/screenshots/05_recruit_result.png)
 
-![Duty assignment](assets/screenshots/06_duty_dispatch.png)
+![值勤派遣](assets/screenshots/06_duty_dispatch.png)
 
-## 4. Random Event Design
+## 4. 随机事件设计
 
-Random events are designed to create pressure and choice, not only flavor text.
+随机事件用于制造压力和选择，同时承载氛围文本。
 
-In the current backend logic:
+当前后端逻辑：
 
-- A pending event can block gacha and duty actions until it is resolved.
-- Event choices can change resources.
-- Some event choices can affect survivor state, such as injured or left.
-- Some events require a target survivor.
-- Some events only become valid when a survivor is already in poor condition.
+- 待处理事件会阻断招募和值勤行动。
+- 事件选项可以改变资源。
+- 部分事件选项会改变幸存者状态，例如重伤或离队。
+- 部分事件需要指定目标幸存者。
+- 部分事件只在幸存者状态较差时进入有效事件池。
 
-This makes events part of the management loop. The player cannot ignore shelter problems and continue clicking actions forever.
+这样可以让事件成为管理循环的一部分。玩家需要先处理避难所问题，再继续行动。
 
-The current event pool is demo-level. It is enough to show categories and consequences, but it still needs more content and more test samples before it could be considered balanced.
+当前事件池为演示级规模，已能展示事件类别和后果。数值平衡和内容量仍需要更多测试样本。
 
-More detail: [RANDOM_EVENTS.md](RANDOM_EVENTS.md)
+更多说明：[RANDOM_EVENTS.md](RANDOM_EVENTS.md)
 
-![Random event](assets/screenshots/02_home_event_overview.png)
+![随机事件](assets/screenshots/02_home_event_overview.png)
 
-## 5. Simulated Emergency Offer Design
+## 5. 应急补给设计
 
-The emergency offer is a pressure-based rescue package.
+应急补给是基于压力触发的救援包。
 
-It is not a real payment system. The current price label is only a presentation placeholder for showing how an emergency support prompt could connect to game pressure.
+当前价格文案只用于演示应急补给入口如何和压力设计连接，项目未接入真实支付系统。
 
-The offer records three behavior states:
+补给记录三类行为状态：
 
-- `exposed`: the offer was shown to the player.
-- `closed`: the player dismissed or postponed the offer.
-- `purchased`: the player chose to activate the offer.
+- `exposed`：补给展示给玩家。
+- `closed`：玩家暂缓处理。
+- `purchased`：玩家启用补给协议。
 
-The design reason is simple: an offer-like prompt is more meaningful when it is connected to player pressure.
+设计理由很直接：补给提示和玩家压力连接后，更容易解释它出现的原因。
 
-Compared with a static shop button, a pressure-based offer is easier to review from an operations perspective:
+从运营复盘角度，可以检查：
 
-- Why did the offer appear?
-- Was the player under resource pressure?
-- Was the team under fatigue or health pressure?
-- Did the player close it or activate it?
-- Did suppression prevent repeated popups?
+- 补给为什么出现？
+- 玩家当时是否有资源压力？
+- 队伍是否有疲劳或健康压力？
+- 玩家暂缓还是启用补给？
+- 抑制逻辑是否减少了重复打断？
 
-Close suppression matters because the same offer should not interrupt the player every time they return to the home page. If pressure becomes severe, the offer can still return as rescue support.
+关闭补给后会进入短暂抑制，减少玩家反复回到首页时被打断。严重压力出现时，补给仍可重新出现作为救援支持。
 
-More detail: [BALANCE_THRESHOLDS.md](BALANCE_THRESHOLDS.md) and [OPS_REVIEW.md](OPS_REVIEW.md)
+更多说明：[BALANCE_THRESHOLDS.md](BALANCE_THRESHOLDS.md) 和 [OPS_REVIEW.md](OPS_REVIEW.md)
 
-![Emergency offer](assets/screenshots/08_emergency_offer.png)
+![应急补给](assets/screenshots/08_emergency_offer.png)
 
-## 6. Logging and Review
+## 6. 日志与复盘
 
-Logs are included so the system can be reviewed after actions happen.
+日志用于在行动发生后复盘系统结果。
 
-Gacha logs help review:
+招募日志可复盘：
 
-- who was recruited
-- rarity and role
-- duplicate survivor handling
+- 招募到谁
+- 稀有度和职业
+- 重复幸存者处理
 
-Duty logs help review:
+值勤日志可复盘：
 
-- which survivor was assigned
-- which duty was performed
-- resource changes
-- result text and state impact
+- 派遣了哪名幸存者
+- 执行了哪类值勤
+- 资源变化
+- 结果文本和状态影响
 
-Offer logs help review:
+补给日志可复盘：
 
-- whether the emergency offer was exposed
-- whether the player closed it
-- whether the player activated it
-- trigger reason and resource state at that time
+- 应急补给是否展示
+- 玩家是否暂缓
+- 玩家是否启用
+- 当时的触发原因和资源状态
 
-For a game operations / R&D-support operations portfolio, this is important because it shows behavior tracking and outcome review, not only interface display.
+对游戏运营 / 研发支持运营作品集来说，日志能展示行为追踪和结果复盘能力。
 
-![Logs](assets/screenshots/09_logs_overview.png)
+![日志](assets/screenshots/09_logs_overview.png)
 
-## 7. What I implemented
+## 7. 已实现内容
 
-Mini Program pages:
+小程序页面：
 
-- Home page for resources, run state, events, emergency offer, and team overview.
-- Gacha page for survivor recruitment.
-- Duty page for survivor selection, duty assignment, and result feedback.
-- Logs page for reviewing gacha, duty, and offer records.
+- 首页：资源、轮次状态、事件、应急补给和队伍概览。
+- 招募页：幸存者招募。
+- 值勤页：幸存者选择、任务派遣和结果反馈。
+- 日志页：查看招募、值勤和补给记录。
 
-Flask APIs:
+Flask 接口：
 
-- status and initialization APIs
-- resource API
-- gacha API
-- survivor API
-- duty API
-- random event resolve API
-- emergency offer state / expose / close / purchase APIs
-- logs APIs
+- 状态与初始化接口
+- 资源接口
+- 招募接口
+- 幸存者接口
+- 值勤接口
+- 随机事件处理接口
+- 应急补给状态 / 展示 / 关闭 / 启用接口
+- 日志接口
 
-SQLite storage:
+SQLite 存储：
 
-- player resources
-- survivor state
-- gacha logs
-- duty logs
-- offer logs
-- run state
+- 玩家资源
+- 幸存者状态
+- 招募日志
+- 值勤日志
+- 补给日志
+- 当前轮次状态
 
-Browser preview:
+浏览器预览：
 
-- `web-demo/` provides a static browser-friendly preview of the loop.
-- It does not connect to the Flask backend.
-- It does not replace the WeChat Mini Program.
+- `web-demo/` 提供静态浏览器预览。
+- 预览版用于快速查看核心循环。
+- 小程序主实现承载完整原型流程。
 
-Documentation and helper scripts:
+文档和辅助脚本：
 
-- `README.md` for project overview and setup.
-- `docs/OPS_REVIEW.md` for operations and product review framing.
-- `docs/BALANCE_THRESHOLDS.md` for current threshold documentation.
-- `docs/RANDOM_EVENTS.md` for event configuration notes.
-- `docs/WEB_DEMO_NOTES.md` for browser preview notes.
-- `scripts/smoke_test_backend.py` for a lightweight backend smoke test.
-- `scripts/create_clean_zip.sh` for creating a safer portfolio archive.
+- `README.md`：项目概览和运行方式。
+- `docs/OPS_REVIEW.md`：运营与产品复盘说明。
+- `docs/BALANCE_THRESHOLDS.md`：当前阈值说明。
+- `docs/RANDOM_EVENTS.md`：事件配置说明。
+- `docs/WEB_DEMO_NOTES.md`：浏览器预览说明。
+- `scripts/smoke_test_backend.py`：轻量后端冒烟测试。
+- `scripts/create_clean_zip.sh`：生成作品集压缩包。
 
-![Web Demo](assets/screenshots/10_web_demo_preview.png)
+![浏览器预览](assets/screenshots/10_web_demo_preview.png)
 
-## 8. What I learned
+## 8. 项目收获
 
-System loop matters more than feature count.
+系统循环比功能数量更重要。
 
-A small project becomes more useful when each feature affects another feature. Recruit, duty, resources, fatigue, health, event, offer, and logs are more meaningful together than as separate screens.
+小项目在各模块互相影响时会更有价值。招募、值勤、资源、疲劳、健康、事件、补给和日志连在一起后，评审能看到完整玩法闭环。
 
-Offer-like prompts should be connected to player pressure.
+补给提示需要连接玩家压力。
 
-The emergency offer is more explainable when it appears because the player is under resource or team pressure. This is more useful than a static shop button for an operations case study.
+应急补给基于资源或队伍压力出现，运营复盘时可以解释出现原因和玩家响应。
 
-Random events should create choices, not only flavor text.
+随机事件需要制造选择。
 
-Events are more valuable when they affect resources or survivor state. The current event pool is small, but it already shows how event choices can create tradeoffs.
+事件影响资源或幸存者状态时，能形成取舍。当前事件池较小，但已经展示了选择如何带来后果。
 
-Logs make operations thinking visible.
+日志让运营思考可见。
 
-Without logs, the project only shows what is currently on screen. With logs, it becomes possible to review player behavior and system outcomes.
+有日志后，可以回看玩家行为和系统结果，便于后续调参与复盘。
 
-Deterministic rule layer should remain clear even if AI tools are used during development.
+核心规则层保持确定性。
 
-This project keeps the core gameplay loop deterministic and local. Optional LLM narrative generation can be a future enhancement, but it should not control core resource settlement or block the main loop.
+项目的核心玩法循环由本地规则控制。未来可以加入可选的大模型叙事增强，但核心资源结算和行动阻断仍由确定规则处理。
 
-## 9. Current limitations
+## 9. 当前范围
 
-Current limitations are intentional and should be stated clearly:
+当前范围需要清楚说明：
 
-- Balance is demo-level and needs more test samples.
-- There is no real payment system.
-- There is no production multi-user backend.
-- The Web Demo is a static preview and does not connect to Flask / SQLite.
-- Optional LLM enhancement is not part of the core runtime.
-- There is no production-ready AI or LLM agent.
-- Event pool and content volume are still small.
-- Analytics are currently log-based, not a full dashboard.
+- 数值平衡为演示级，还需要更多测试样本。
+- 项目未接入真实支付系统。
+- 项目未建设生产级多用户后端。
+- 浏览器预览版为静态预览，不连接 Flask / SQLite。
+- 可选大模型增强暂未进入核心运行时。
+- 事件池和内容量仍较小。
+- 当前分析能力基于日志，尚未建设完整数据看板。
 
-These limitations are acceptable for the project goal because the purpose is to demonstrate a working loop and operations thinking, not to claim production readiness.
+这些范围与作品集目标一致：展示可运行闭环和运营复盘思路。
 
-## 10. Next steps
+## 10. 下一步
 
-Possible next steps:
+可继续推进：
 
-- Tune thresholds for food, power, materials, fatigue, health, and emergency offer timing.
-- Improve analytics summary, such as lowest resource point, number of duties, event choices, and offer responses per run.
-- Add more event categories, such as weather, disease, equipment aging, internal conflict, and outside trade.
-- Improve screenshots and recording path for portfolio review.
-- Add event logs for clearer review of choices and consequences.
-- Keep the smoke test updated as backend endpoints evolve.
-- Add optional narrative enhancement with local template fallback.
+- 调整食物、电力、材料、疲劳、健康和应急补给触发阈值。
+- 增加分析摘要，例如单局资源最低点、值勤次数、事件选择和补给响应。
+- 增加天气、疾病、设备老化、内部争执、外部交易等事件类别。
+- 打磨截图和录制路径，便于作品集评审。
+- 增加事件日志，让选择和后果更容易复盘。
+- 随后维护后端冒烟测试，跟随接口变化更新。
+- 加入可选叙事增强，并保留本地模板兜底。
 
-The priority should remain:
+优先顺序：
 
-1. Keep the core loop stable.
-2. Make behavior and outcomes easier to review.
-3. Expand content only after the system remains understandable.
+1. 保持核心循环稳定。
+2. 让行为和结果更容易复盘。
+3. 在系统仍容易理解的前提下扩展内容。

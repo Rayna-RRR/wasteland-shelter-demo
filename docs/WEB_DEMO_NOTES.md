@@ -1,10 +1,10 @@
-# Web Demo 说明
+# 浏览器预览版说明
 
-## 为什么需要 Web Demo
+## 为什么需要浏览器预览版
 
-主项目是微信小程序 + Flask + SQLite 原型。Web Demo 的作用是降低作品集评审门槛，让没有微信开发者工具或本地后端环境的人，也能在浏览器里快速看到核心循环和视觉方向。
+主项目是微信小程序 + Flask + SQLite 原型。浏览器预览版用于降低作品集评审门槛，让没有微信开发者工具或本地后端环境的人，也能在浏览器里快速看到核心循环和视觉方向。
 
-它不是替代主项目，也不是新的游戏版本。README 的“快速预览”指向的是这个轻量浏览器预览。
+它的定位是补充展示入口。README 的“快速预览”指向这个轻量浏览器预览。
 
 在线预览地址：
 
@@ -18,7 +18,7 @@ https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 招募 -> 值勤 -> 资源 / 状态变化 -> 随机事件 -> 应急补给 -> 日志
 ```
 
-## Web Demo 包含什么
+## 浏览器预览版包含什么
 
 `web-demo/` 是一个轻量静态页面，包含：
 
@@ -30,7 +30,7 @@ https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 - 随机事件预览
 - 应急补给预览
 - 简化日志记录
-- Web Demo 与主小程序实现的区别提示
+- 浏览器预览版与主小程序实现的区别提示
 - “60 秒查看路径”和核心循环提示
 
 页面复用了现有素材：
@@ -41,20 +41,20 @@ https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 - `emergency_supply.png`
 - 随机事件插图
 
-## Web Demo 不包含什么
+## 浏览器预览版范围
 
-Web Demo 不包含：
+浏览器预览版当前不接入：
 
 - Flask API 连接
 - SQLite 数据读写
 - 微信小程序运行环境
 - 后端真实结算逻辑
 - 数据库结构迁移
-- LLM 功能
+- 大模型功能
 - 新商业化系统
 - 完整游戏进度系统
 - 真实支付
-- 生产级 AI / LLM 运行时
+- 生产级大模型运行时
 
 所有状态都在 `web-demo/app.js` 里静态模拟，刷新页面会回到初始预览状态。
 
@@ -69,7 +69,7 @@ Web Demo 不包含：
 - 随机事件 / 应急补给状态
 - SQLite 日志
 
-Web Demo 只提供浏览器预览：
+浏览器预览版只提供浏览器预览：
 
 - 用静态数组模拟幸存者、值勤和事件
 - 用前端状态模拟资源和日志
@@ -108,7 +108,7 @@ http://localhost:8080/web-demo/
 
 后续可以在 GitHub 仓库设置中启用 Pages：
 
-1. 进入 GitHub repository settings。
+1. 进入 GitHub 仓库设置。
 2. 打开 Pages。
 3. Source 选择 `Deploy from a branch`。
 4. Branch 选择 `main` 或展示用分支。
@@ -119,7 +119,7 @@ http://localhost:8080/web-demo/
 https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/
 ```
 
-部署前需要确认 `web-demo/` 和 `miniprogram/assets/images/` 都已经提交，因为 Web Demo 通过相对路径复用这些素材。
+部署前需要确认 `web-demo/` 和 `miniprogram/assets/images/` 都已经提交，因为浏览器预览版通过相对路径复用这些素材。
 
 如果 GitHub 用户名或仓库名不同，访问路径应替换为：
 
@@ -131,7 +131,7 @@ https://<your-github-username>.github.io/<repo-name>/web-demo/
 
 README 应明确区分：
 
-- Web Demo：静态、浏览器友好、静态模拟状态、快速预览。
-- Mini Program：主实现，连接 Flask + SQLite，包含实际项目逻辑。
+- 浏览器预览版：静态、浏览器友好、静态模拟状态、快速预览。
+- 小程序主实现：连接 Flask + SQLite，包含实际项目逻辑。
 
-如果后续 Web Demo 行为改变，需要同步更新 README 的“快速预览”和本说明文档。
+如果后续浏览器预览版行为改变，需要同步更新 README 的“快速预览”和本说明文档。

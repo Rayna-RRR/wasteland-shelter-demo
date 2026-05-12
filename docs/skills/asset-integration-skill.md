@@ -1,68 +1,68 @@
-# Asset Integration Skill
+# 素材接入说明
 
-## Purpose
+## 目标
 
-Use this skill when adding generated visual or audio assets to the Wasteland Shelter Mini Program demo.
+本说明用于接入已经生成好的视觉或音频素材，例如角色头像、首页背景、值勤图标、应急补给图片、轻量背景音乐或音效。
 
-The goal is to integrate assets safely while keeping gameplay logic, backend settlement, database schema, and core interaction flow unchanged.
+接入素材时保持玩法逻辑、后端结算、数据库结构和核心交互流程稳定。素材用于提升游戏感、可读性和作品集呈现。
 
-Assets should improve game feel, readability, and portfolio presentation. They should not hide weak logic or create unnecessary scope expansion.
+## 适用场景
 
-## When to Use
+适用于以下任务：
 
-Use this skill when integrating:
+- 接入角色头像
+- 接入默认幸存者头像
+- 接入首页背景图
+- 接入值勤图标
+- 接入应急补给图片
+- 接入轻量背景音乐
+- 接入音效
+- 接入作品集截图用视觉素材
 
-- character portraits
-- default survivor portrait
-- home background image
-- duty icons
-- emergency supply image
-- light background music
-- sound effects
-- generated visual assets for portfolio screenshots
+常见请求示例：
 
-Typical user requests include:
+- “我已经生成了角色头像，把它们接进项目。”
+- “图片已经放到 assets 目录，请安全接入。”
+- “加首页背景图。”
+- “接入值勤图标。”
+- “加轻量音效。”
+- “检查素材路径和兜底展示。”
 
-- “I have generated character portraits. Connect them to the project.”
-- “I placed images under assets. Please wire them safely.”
-- “Add the home background image.”
-- “Connect duty icons.”
-- “Add light sound effects.”
-- “Check asset paths and fallback behavior.”
+## 范围边界
 
-## When Not to Use
+本说明用于素材接入。以下任务应拆成单独需求：
 
-Do not use this skill for:
+- 生成图片
+- 生成音乐
+- 整体重设计界面
+- 修改后端玩法逻辑
+- 修改招募概率
+- 修改值勤结算
+- 修改资源计算
+- 修改应急补给触发逻辑
+- 修改数据库结构
+- 增加新玩法系统
+- 增加大模型或智能代理运行时功能
 
-- generating images
-- generating music
-- redesigning the whole UI
-- changing backend game logic
-- changing gacha probability
-- changing duty settlement
-- changing resource calculation
-- changing emergency offer logic
-- changing database schema
-- adding new gameplay systems
-- adding LLM or Agent runtime features
+如果用户请求包含玩法改动，先明确拆分素材任务和玩法任务。
 
-If the requested task requires gameplay changes, stop and ask for a separate gameplay task.
+## 项目背景
 
-## Project Context
+这是一个微信小程序 + Flask + SQLite 的废土避难所管理演示项目。
 
-This is a WeChat Mini Program + Flask + SQLite wasteland shelter management demo.
+作品集目标是让演示原型具备轻量避难所管理游戏感，同时保持系统逻辑清楚、可检查、可复盘。
 
-The portfolio goal is to make the demo feel like a light shelter management game prototype while keeping the system logic clear and reviewable.
+核心循环：
 
-The core loop is:
+```text
+招募幸存者 -> 分配值勤 -> 改变资源和幸存者状态 -> 触发压力 / 补给逻辑 -> 记录日志
+```
 
-Recruit survivors -> assign duty -> change resources and survivor states -> trigger pressure / offer logic -> record logs.
+素材应服务于这条循环。
 
-Assets should support this loop visually.
+## 素材目录约定
 
-## Asset Folder Convention
-
-Use these folders:
+使用以下目录：
 
 ```text
 miniprogram/assets/images/characters/
@@ -73,13 +73,9 @@ miniprogram/assets/audio/bgm/
 miniprogram/assets/audio/sfx/
 ```
 
-Do not scatter assets across page folders.
+素材集中放在素材目录中。文件名使用小写英文和下划线。
 
-Do not use Chinese filenames.
-
-Use lowercase English names with underscores.
-
-Recommended names:
+推荐命名：
 
 ```text
 default_survivor.png
@@ -107,60 +103,58 @@ warning_offer.mp3
 soft_click.mp3
 ```
 
-## Character Portrait Rules
+## 角色头像规则
 
-Character portraits must be placed under:
+角色头像放在：
 
 ```text
 miniprogram/assets/images/characters/
 ```
 
-A default fallback portrait should exist:
+建议保留默认兜底头像：
 
 ```text
 miniprogram/assets/images/characters/default_survivor.png
 ```
 
-Portrait paths must be centralized through:
+头像路径集中维护在：
 
 ```text
 miniprogram/utils/portrait-map.js
 ```
 
-Do not hardcode character portrait paths inside individual pages unless the existing project structure already requires it.
+预期行为：
 
-Expected behavior:
+- 幸存者有头像映射时，展示对应头像。
+- 幸存者没有头像映射时，展示默认头像。
+- 默认头像缺失时，展示现有文字兜底。
+- 单个头像缺失时，首页、招募页和值勤页保持可用。
 
-- If a survivor has a mapped portrait, show that portrait.
-- If a survivor does not have a mapped portrait, show the default survivor portrait.
-- If the default portrait is missing, fall back to the existing text fallback.
-- Missing individual portraits must not crash Home, Gacha, or Duty pages.
+## 头像质量建议
 
-## Character Portrait Quality Guideline
-
-Recommended portrait specs:
+推荐规格：
 
 ```text
-Size: 512 × 512 px
-Format: PNG or WebP
-Style: consistent bust / half-body portrait
-Background: simple and low-distraction
-File size: preferably 100–300 KB per image
+尺寸：512 × 512 px
+格式：PNG 或 WebP
+风格：统一的半身或头像构图
+背景：简洁、低干扰
+文件大小：建议每张 100-300 KB
 ```
 
-Portraits are used in:
+头像使用位置：
 
-- Home survivor cards
-- Gacha result card
-- Duty survivor selection cards
-- Duty selected survivor area
-- Duty result area if applicable
+- 首页幸存者卡片
+- 招募结果卡片
+- 值勤幸存者选择卡片
+- 值勤当前选择区域
+- 值勤结果区域
 
-The portrait should remain readable at small card size.
+头像在小卡片尺寸下仍需保持可读。
 
-## Image Path Rules for WeChat Mini Program
+## 图片路径规则
 
-Prefer Mini Program-safe absolute project paths:
+优先使用小程序安全的项目绝对路径：
 
 ```text
 /assets/images/characters/zhou_ying.png
@@ -170,46 +164,38 @@ Prefer Mini Program-safe absolute project paths:
 /assets/images/items/emergency_supply.png
 ```
 
-Avoid deep relative paths like:
+修改前先查看项目中已经可用的图片引用。
 
-```text
-../../../assets/images/characters/zhou_ying.png
-```
+## 背景图规则
 
-unless the current project structure clearly requires relative paths.
+首页背景图用于增强氛围，同时保持文字和资源数字清晰。
 
-When in doubt, inspect existing working image references first.
+要求：
 
-## Background Image Rules
+- 文字保持可读。
+- 重要资源数字后面避免高对比复杂背景。
+- 需要时使用遮罩。
+- 本轮素材接入不做整页重设计。
+- 大图不铺到所有页面。
 
-Home background images should improve atmosphere without hurting readability.
-
-Requirements:
-
-- Keep text readable.
-- Avoid high-contrast busy images behind important resource numbers.
-- Use overlays if needed.
-- Do not redesign the entire page.
-- Do not add large images to every page.
-
-Recommended usage:
+推荐使用：
 
 ```text
 miniprogram/assets/images/backgrounds/shelter_home.png
 ```
 
-Use background images mainly for:
+适合使用位置：
 
-- Home page atmosphere
-- Maybe gacha result background later
+- 首页氛围背景
+- 后续可考虑招募结果背景
 
-Do not add background images to Logs page unless explicitly requested.
+日志页默认保持轻量背景。
 
-## Duty Icon Rules
+## 值勤图标规则
 
-Duty icons should make task selection easier to understand.
+值勤图标用于让任务选择更容易理解。
 
-Recommended files:
+推荐文件：
 
 ```text
 miniprogram/assets/images/icons/duty_scavenge.png
@@ -218,44 +204,34 @@ miniprogram/assets/images/icons/duty_cook.png
 miniprogram/assets/images/icons/duty_guard.png
 ```
 
-Duty icons should be optional.
+值勤图标保持可选。图标缺失时，页面仍展示任务文字标签。
 
-If an icon is missing, the page should still show the duty text label.
+值勤类型 key 和接口参数保持与后端兼容。
 
-Do not change duty type keys or API payloads.
+## 应急补给图片规则
 
-Existing duty keys must remain compatible with backend logic.
+应急补给图片用于支持压力触发补给的展示。
 
-## Emergency Supply Image Rules
-
-The emergency supply image should support the simulated emergency offer / pressure design.
-
-Recommended file:
+推荐文件：
 
 ```text
 miniprogram/assets/images/items/emergency_supply.png
 ```
 
-Use it in the emergency offer card only.
+图片只接入应急补给卡片。本轮素材接入不创建完整商店页，不新增商业化系统，不修改补给触发逻辑。
 
-Do not create a full shop page.
+## 音频规则
 
-Do not add new monetization systems.
+音频保持可选、轻量。
 
-Do not modify offer trigger logic unless the user explicitly requests a gameplay task.
-
-## Audio Rules
-
-Audio should be optional and lightweight.
-
-Recommended folders:
+推荐目录：
 
 ```text
 miniprogram/assets/audio/bgm/
 miniprogram/assets/audio/sfx/
 ```
 
-Recommended files:
+推荐文件：
 
 ```text
 miniprogram/assets/audio/bgm/shelter_ambient.mp3
@@ -265,23 +241,22 @@ miniprogram/assets/audio/sfx/warning_offer.mp3
 miniprogram/assets/audio/sfx/soft_click.mp3
 ```
 
-Rules:
+规则：
 
-- Do not autoplay loud music.
-- Prefer user-triggered sound effects.
-- BGM should be low-volume and easy to disable.
-- Audio failure must not block gameplay.
-- Missing audio files must not crash the page.
-- Do not add audio to Logs page unless explicitly requested.
-- Keep audio code centralized if practical.
+- 音效优先由用户操作触发。
+- 背景音乐保持低音量，并提供关闭方式。
+- 音频加载失败时，玩法流程继续可用。
+- 音频文件缺失时，页面继续可用。
+- 日志页默认不接入音频。
+- 音频代码尽量集中维护。
 
-## Integration Process
+## 接入流程
 
-### Step 1: Inspect Existing Structure
+### 第 1 步：检查现有结构
 
-Before editing, inspect relevant files.
+接入前先查看相关文件。
 
-For portraits:
+角色头像：
 
 ```text
 miniprogram/utils/portrait-map.js
@@ -291,85 +266,73 @@ miniprogram/pages/duty/
 miniprogram/app.wxss
 ```
 
-For background:
+背景图：
 
 ```text
 miniprogram/pages/home/
 miniprogram/app.wxss
 ```
 
-For duty icons:
+值勤图标：
 
 ```text
 miniprogram/pages/duty/
 ```
 
-For emergency supply image:
+应急补给图片：
 
 ```text
 miniprogram/pages/home/
 miniprogram/pages/logs/
-or the existing emergency offer component/page if present
 ```
 
-For audio:
+音频：
 
 ```text
 miniprogram/app.js
 miniprogram/pages/gacha/
 miniprogram/pages/duty/
-any existing utility files
 ```
 
-### Step 2: Confirm Asset Files
+### 第 2 步：确认素材文件
 
-List the relevant asset folder.
+检查内容：
 
-Check:
+- 文件存在
+- 文件名符合目录约定
+- 路径符合项目约定
+- 需要兜底图时已准备默认素材
+- 文件大小合理
+- 没有意外加入重复或未使用的大文件
 
-- files exist
-- filenames are English
-- paths match project convention
-- default fallback exists where needed
-- file sizes are reasonable
-- no duplicate or unused large files are added accidentally
+### 第 3 步：更新集中映射或工具
 
-### Step 3: Update Central Mapping or Utility
-
-For portraits, update:
+角色头像更新：
 
 ```text
 miniprogram/utils/portrait-map.js
 ```
 
-Preserve the current structure.
-
-Do not rewrite the whole utility unless necessary.
-
-For duty icons or audio, create a centralized mapping file only if it keeps the code cleaner.
-
-Possible utility names:
+保留现有结构。值勤图标或音频需要集中维护时，可以新增轻量映射文件，例如：
 
 ```text
 miniprogram/utils/asset-map.js
 miniprogram/utils/audio-map.js
 ```
 
-Do not create unnecessary abstraction for a one-line change.
+一行改动无需新增抽象。
 
-### Step 4: Keep Fallback Safe
+### 第 4 步：保留兜底能力
 
-Never assume every asset exists.
+素材缺失时应用仍需可用：
 
-Never assume every survivor has a portrait.
+- 头像缺失时使用默认头像或文字兜底。
+- 音频缺失时跳过播放。
+- 图标缺失时保留文字标签。
 
-Never assume audio is available.
+### 第 5 步：保持玩法稳定
 
-The app must still work with missing assets.
-
-### Step 5: Avoid Gameplay Changes
-
-Do not modify:
+素材接入不修改以下后端文件：
 
 ```text
 backend/app.py
@@ -377,24 +340,20 @@ backend/init_db.py
 backend/data/
 ```
 
-Do not change API payloads.
+接口参数、值勤结算、招募概率、资源逻辑、幸存者状态逻辑和应急补给逻辑保持不变。
 
-Do not change duty settlement, gacha probability, resource logic, survivor state logic, or emergency offer logic.
+前端字段缺失时，在界面层做兜底处理。
 
-If a frontend field is missing, handle it gracefully in the UI.
+### 第 6 步：验证
 
-### Step 6: Validate
-
-Run syntax checks for changed JS files.
-
-Minimum checks:
+运行 JS 语法检查：
 
 ```bash
 node --check miniprogram/utils/portrait-map.js
 git diff --check
 ```
 
-If page JS files are changed:
+如果页面 JS 文件有改动：
 
 ```bash
 node --check miniprogram/pages/home/home.js
@@ -402,42 +361,42 @@ node --check miniprogram/pages/gacha/gacha.js
 node --check miniprogram/pages/duty/duty.js
 ```
 
-Confirm no backend files were modified:
+确认后端文件未被误改：
 
 ```bash
 git diff --name-only | grep '^backend/' || true
 ```
 
-Manual test in WeChat DevTools:
+微信开发者工具手动检查：
 
-1. Open Home page.
-2. Confirm survivor cards show portraits or fallback.
-3. Run Gacha.
-4. Confirm gacha result shows portrait or fallback.
-5. Open Duty page.
-6. Confirm survivor list and selected survivor show portrait or fallback.
-7. If duty icons were added, confirm labels still show when icons are missing.
-8. If emergency image was added, confirm offer card still works without changing trigger logic.
-9. If audio was added, confirm audio failure does not block gameplay.
-10. Confirm no page crashes when assets are missing.
+1. 打开首页。
+2. 确认幸存者卡片展示头像或文字兜底。
+3. 执行招募。
+4. 确认招募结果展示头像或文字兜底。
+5. 打开值勤页。
+6. 确认幸存者列表和选中幸存者展示头像或文字兜底。
+7. 如果接入了值勤图标，确认图标缺失时文字标签仍显示。
+8. 如果接入了应急补给图片，确认补给卡片流程保持正常。
+9. 如果接入了音频，确认音频失败时玩法流程继续可用。
+10. 确认素材缺失时页面不会崩溃。
 
-## Output Format
+## 输出格式
 
-When using this skill, return in Chinese:
+使用本说明时，输出中文摘要：
 
 ```text
 1. 本次接入了哪些素材
 2. 改了哪些文件
 3. 哪些页面已经接入
-4. fallback 如何工作
+4. 兜底展示如何工作
 5. 怎么手动测试
-6. 是否有不该提交的文件
+6. 是否有本地文件需要保留
 7. 下一步建议
 ```
 
-## Git Safety Rules
+## Git 提交提醒
 
-Do not commit generated runtime files:
+以下本地生成文件保留在本地：
 
 ```text
 backend/data/game.db
@@ -447,58 +406,6 @@ __pycache__/
 *.pyc
 ```
 
-If these appear in git status, warn the user before staging.
+如果这些文件出现在 `git status` 中，先提醒用户再暂存。
 
-Use explicit git add commands.
-
-Avoid:
-
-```bash
-git add .
-```
-
-unless the working tree has already been reviewed.
-
-Recommended final check:
-
-```bash
-git status --short
-git diff --cached --name-only
-```
-
-## Commit Guidance
-
-For character portraits:
-
-```bash
-git add miniprogram/assets/images/characters/ miniprogram/utils/portrait-map.js
-```
-
-For background image:
-
-```bash
-git add miniprogram/assets/images/backgrounds/ miniprogram/pages/home/ miniprogram/app.wxss
-```
-
-For duty icons:
-
-```bash
-git add miniprogram/assets/images/icons/ miniprogram/pages/duty/
-```
-
-For audio:
-
-```bash
-git add miniprogram/assets/audio/ miniprogram/pages/gacha/ miniprogram/pages/duty/
-```
-
-Always inspect staged files before committing.
-
-Suggested commit messages:
-
-```text
-Add survivor portrait assets
-Connect home background asset
-Add duty icon assets
-Add light result sound effects
-```
+使用明确的 `git add` 命令。批量暂存前先检查工作区。

@@ -1,30 +1,30 @@
 # 废土避难所值勤管理器
 
-一个面向游戏运营 / R&D-support operations 实习作品集的轻量废土避难所管理原型。
+一个面向游戏运营和研发支持运营实习作品集的轻量废土避难所管理原型。
 
-主实现是 **WeChat Mini Program + Flask + SQLite**。仓库里的 `web-demo/` 只是静态浏览器预览，用于降低作品集评审门槛。
+主实现是 **微信小程序 + Flask + SQLite**。仓库里的 `web-demo/` 是静态浏览器预览，用于降低作品集评审门槛。
 
 ---
 
-## 评审入口 / Reviewer Links
+## 评审入口
 
-- [在线 Web Demo / Open Web Demo](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
-- [项目 Case Study](docs/CASE_STUDY.md)
+- [在线浏览器预览](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
+- [项目案例说明](docs/CASE_STUDY.md)
 - [运营与产品复盘说明](docs/OPS_REVIEW.md)
 - [数值阈值说明](docs/BALANCE_THRESHOLDS.md)
 - [随机事件配置说明](docs/RANDOM_EVENTS.md)
-- [Web Demo 说明](docs/WEB_DEMO_NOTES.md)
-- [后端 Smoke Test](scripts/smoke_test_backend.py)
+- [浏览器预览说明](docs/WEB_DEMO_NOTES.md)
+- [后端冒烟测试](scripts/smoke_test_backend.py)
 
 ---
 
 ## 快速预览
 
-在线打开互动 Web Demo：
+在线打开互动浏览器预览：
 
-[Open Web Demo](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
+[打开在线浏览器预览](https://rayna-rrr.github.io/wasteland-shelter-demo/web-demo/)
 
-说明：这是作品集用浏览器预览入口，用静态前端状态快速展示招募、值勤、资源 / 状态变化、随机事件、应急补给和日志。它不是完整微信小程序，也不连接 Flask / SQLite。
+说明：这是作品集用浏览器预览入口，用静态前端状态快速展示招募、值勤、资源 / 状态变化、随机事件、应急补给和日志。完整原型流程由微信小程序 + Flask + SQLite 承载。
 
 60 秒建议查看路径：
 
@@ -34,7 +34,7 @@
 4. 查看“事件 / 补给”面板，处理随机事件或应急补给。
 5. 查看“日志”如何记录行为和结果。
 
-快速浏览静态 Web Demo：
+快速浏览静态浏览器预览：
 
 ```bash
 open web-demo/index.html
@@ -52,13 +52,13 @@ python3 -m http.server 8080
 http://localhost:8080/web-demo/
 ```
 
-GitHub Pages 根路径可能显示仓库 README；`/web-demo/` 才是可交互的浏览器预览页面。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
+GitHub Pages 根路径可能显示仓库 README；可交互的浏览器预览页面位于 `/web-demo/`。完整原型逻辑在微信小程序 + Flask + SQLite 版本中。
 
 ---
 
 ## 分享作品集前
 
-Do not share raw project folders directly. Use scripts/create_clean_zip.sh to create a safe portfolio archive.
+分享作品集前，请先运行 `scripts/create_clean_zip.sh` 生成作品集压缩包。
 
 运行脚本会生成一个排除本地环境、缓存、数据库文件和私有配置的作品集压缩包。
 
@@ -73,25 +73,14 @@ bash scripts/create_clean_zip.sh
 《废土避难所值勤管理器》是一个轻量避难所管理原型，用于展示：
 
 - 如何把招募、派遣、资源变化、幸存者状态、随机事件、应急补给和日志串成一条可运行闭环
-- 如何让应急补给由真实压力触发，而不是像随机商城弹窗
+- 如何让应急补给由真实压力触发，减少随机商城弹窗感
 - 如何从游戏运营 / 研发支持运营视角，让玩家行为和系统反馈可追踪、可复盘
 
-它不是商业化完整游戏，重点不是大规模内容量，而是用较小代码规模做出可演示、可解释、可复盘的系统循环。
+当前范围是作品集原型，重点是用较小代码规模做出可演示、可解释、可复盘的系统循环。
 
 ---
 
 ## 核心循环
-
-```text
-Recruit survivor
--> Assign duty
--> Resources change
--> Fatigue / health change
--> Random event / emergency offer
--> Logs
-```
-
-中文流程：
 
 ```text
 招募幸存者 -> 派遣值勤 -> 资源变化 -> 疲劳 / 健康变化 -> 随机事件 / 应急补给 -> 日志复盘
@@ -108,16 +97,16 @@ Recruit survivor
 - 随机事件展示与事件插图
 - 压力驱动的应急补给协议
 - 应急补给日志：`exposed` / `closed` / `purchased`
-- 静态 Web Demo 预览，便于无小程序环境时快速查看
+- 静态浏览器预览，便于无小程序环境时快速查看
 
 ---
 
 ## 技术栈
 
-- WeChat Mini Program
+- 微信小程序
 - Python 3.9 + Flask + flask-cors
 - SQLite
-- HTML / CSS / JavaScript（Web Demo）
+- HTML / CSS / JavaScript（浏览器预览版）
 - Git / GitHub
 
 ---
@@ -166,7 +155,7 @@ cp miniprogram/project.private.config.example.json miniprogram/project.private.c
 "appid": "your-wechat-app-id"
 ```
 
-不要把真实 AppID、AppSecret、token、云开发环境 ID 或其他密钥提交到公开仓库。`project.private.config.json` 已加入 `.gitignore`，用于存放微信开发者工具的本地私有配置。
+真实 AppID、AppSecret、token、云开发环境 ID 或其他密钥应保存在本地私有配置中。`project.private.config.json` 已加入 `.gitignore`，用于存放微信开发者工具的本地私有配置。
 
 #### 后端本地启动
 
@@ -197,7 +186,7 @@ python backend/app.py
 http://localhost:5001
 ```
 
-#### 后端 smoke test
+#### 后端冒烟测试
 
 后端服务启动后，另开一个终端，在仓库根目录运行：
 
@@ -206,29 +195,29 @@ source .venv/bin/activate
 python scripts/smoke_test_backend.py
 ```
 
-如果后端不是默认地址，可以临时指定 API 地址：
+如果后端地址改过，可以临时指定 API 地址：
 
 ```bash
 WASTELAND_API_BASE_URL=http://127.0.0.1:5001 python scripts/smoke_test_backend.py
 ```
 
-看到最后一行 `PASS backend smoke test completed`，表示本地 Flask 服务、SQLite 数据库和主要 API 流程可以基本跑通。它不是完整单元测试，只用于快速检查作品集演示前的后端连通性。
+看到最后一行 `PASS backend smoke test completed`，表示本地 Flask 服务、SQLite 数据库和主要 API 流程可以基本跑通。该脚本用于快速检查作品集演示前的后端连通性。
 
 如果当前回合有待处理随机事件，smoke test 会优先选择一个低风险事件选项完成处理，再继续招募和值勤检查。
 
 然后在微信开发者工具中打开 `miniprogram/` 目录，并确认 `miniprogram/config.js` 中的接口地址指向本地 Flask 后端。
 
-首次启动时，首页会先进入 onboarding。填写避难所代号、指挥官名字并选择难度后，才会正式进入首页、招募、值勤和日志流程。
+首次启动时，首页会先进入初始化。填写避难所代号、指挥官名字并选择难度后，会正式进入首页、招募、值勤和日志流程。
 
 ---
 
 ## 浏览器预览版与小程序主实现对比
 
-| 项目 | Web Demo | Mini Program 主实现 |
+| 项目 | 浏览器预览版 | 小程序主实现 |
 | --- | --- | --- |
 | 用途 | 快速浏览作品集效果 | 真实原型实现 |
 | 运行方式 | 浏览器打开 `web-demo/index.html` | 微信开发者工具 + Flask 后端 |
-| 数据 | 静态前端 mock state | Flask API + SQLite |
+| 数据 | 静态前端演示状态 | Flask API + SQLite |
 | 结算 | 前端简化模拟 | 后端实际逻辑 |
 | 日志 | 页面内临时记录 | SQLite 日志接口 |
 | 适合场景 | 招聘方快速预览 | 深入查看项目结构和完整闭环 |
@@ -237,10 +226,10 @@ WASTELAND_API_BASE_URL=http://127.0.0.1:5001 python scripts/smoke_test_backend.p
 
 ## 作品集价值
 
-从游戏运营 / R&D-support operations 角度，这个项目重点展示：
+从游戏运营和研发支持运营角度，这个项目重点展示：
 
 - 系统规则、玩家操作、资源压力、幸存者状态和日志如何连接成闭环
-- 应急补给如何由资源和队伍压力触发，而不是随机出现的商城弹窗
+- 应急补给如何由资源和队伍压力触发，减少随机商城弹窗感
 - 日志如何记录招募、值勤和补给行为，让玩家 / 系统行为可回看
 - 视觉素材如何提升可读性，同时不替代系统设计本身
 - 一个轻量原型如何逐步从“功能可跑”推进到“行为可解释、结果可复盘”
@@ -251,10 +240,10 @@ WASTELAND_API_BASE_URL=http://127.0.0.1:5001 python scripts/smoke_test_backend.p
 
 当前项目保持诚实范围：
 
-- 不是商业化完整游戏，也不是 production-ready 项目
-- Web Demo 不是完整小程序，只是静态预览
-- 数值平衡仍是 demo 级别，主要用于表达压力循环
-- LLM 不在核心运行时逻辑中
+- 当前范围是作品集原型，未按商业化完整游戏或生产上线项目建设
+- 浏览器预览版用于静态快速预览，小程序主实现承载完整原型流程
+- 数值平衡仍是演示级别，主要用于表达压力循环
+- 大模型保持在未来可选叙事增强位置，不进入核心运行时逻辑
 - 没有账号、线上服务、支付、完整运营后台或复杂数据分析平台
 
 后续可以继续加强：
@@ -262,7 +251,7 @@ WASTELAND_API_BASE_URL=http://127.0.0.1:5001 python scripts/smoke_test_backend.p
 - 更细的数值平衡
 - 更完整的随机事件配置
 - 更清晰的日志分析视图
-- GitHub Pages / 作品集部署 polish
+- GitHub Pages / 作品集部署打磨
 - 更系统化的运营复盘说明
 
 ---

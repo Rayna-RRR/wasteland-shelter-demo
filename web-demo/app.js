@@ -1,4 +1,5 @@
 const asset = (path) => `../miniprogram/assets/images/${path}`
+const dom = {}
 
 const survivorsPool = [
   {
@@ -252,7 +253,7 @@ function getNextHint(resourceDelta, stateDelta, survivor) {
 function imageMarkup(src, fallback, className) {
   return `
     <span class="${className}">
-      <img src="${src}" alt="${fallback}" data-fallback="${fallback}">
+      <img src="${src}" alt="${fallback}" data-fallback="${fallback}" decoding="async">
       <span class="asset-fallback">${fallback}</span>
     </span>
   `
@@ -264,8 +265,7 @@ function setBadge(element, info) {
 }
 
 function renderResources() {
-  const grid = document.getElementById("resourceGrid")
-  grid.innerHTML = resourceMeta.map((item) => {
+  dom.resourceGrid.innerHTML = resourceMeta.map((item) => {
     const value = state.resources[item.key]
     const tone = value <= (item.key === "materials" ? 30 : 55) ? "danger" : value <= 68 ? "warning" : ""
     const width = item.key === "premium" ? clamp(value * 20, 8, 100) : clamp(value, 4, 100)
@@ -278,12 +278,11 @@ function renderResources() {
     `
   }).join("")
 
-  setBadge(document.getElementById("pressureBadge"), getPressureState())
+  setBadge(dom.pressureBadge, getPressureState())
 }
 
 function renderSurvivors() {
-  const list = document.getElementById("survivorList")
-  list.innerHTML = state.survivors.map((survivor) => {
+  dom.survivorList.innerHTML = state.survivors.map((survivor) => {
     const status = getSurvivorState(survivor)
     const selected = survivor.id === state.selectedSurvivorId
     return `
@@ -304,7 +303,7 @@ function renderSurvivors() {
   }).join("")
 
   const selected = state.survivors.find((survivor) => survivor.id === state.selectedSurvivorId)
-  document.getElementById("selectedBadge").textContent = selected ? `已选：${selected.name}` : "未选择"
+  dom.selectedBadge.textContent = selected ? `已选：${selected.name}` : "未选择"
   renderTeamHint()
 }
 
@@ -312,9 +311,8 @@ function renderTeamHint() {
   const summary = getTeamSummary()
   const highFatigue = state.survivors.filter((survivor) => survivor.fatigue >= 75).length
   const lowHealth = state.survivors.filter((survivor) => survivor.health <= 60).length
-  const node = document.getElementById("teamHint")
-  node.className = `team-hint ${summary.tone === "danger" ? "danger" : summary.tone === "warning" ? "warning" : ""}`
-  node.innerHTML = `
+  dom.teamHint.className = `team-hint ${summary.tone === "danger" ? "danger" : summary.tone === "warning" ? "warning" : ""}`
+  dom.teamHint.innerHTML = `
     <div class="team-hint-title">
       <span>队伍状态</span>
       <span>${summary.label}</span>
@@ -329,8 +327,7 @@ function renderTeamHint() {
 }
 
 function renderDuties() {
-  const options = document.getElementById("dutyOptions")
-  options.innerHTML = duties.map((duty) => {
+  dom.dutyOptions.innerHTML = duties.map((duty) => {
     const selected = duty.type === state.selectedDutyType
     return `
       <article class="duty-card ${selected ? "selected" : ""} ${duty.risk === "高风险" ? "risk" : ""}" data-duty-type="${duty.type}">
@@ -345,21 +342,18 @@ function renderDuties() {
 }
 
 function renderResult() {
-  const resultCard = document.getElementById("resultCard")
-  const resultBadge = document.getElementById("resultBadge")
-
   if (!state.lastResult) {
-    resultBadge.className = "status-badge"
-    resultBadge.textContent = "等待行动"
-    resultCard.className = "result-card empty-state"
-    resultCard.textContent = "执行一次值勤后，这里会显示资源变化、幸存者状态变化和下一步建议。"
+    dom.resultBadge.className = "status-badge"
+    dom.resultBadge.textContent = "等待行动"
+    dom.resultCard.className = "result-card empty-state"
+    dom.resultCard.textContent = "执行一次值勤后，这里会显示资源变化、幸存者状态变化和下一步建议。"
     return
   }
 
   const result = state.lastResult
-  setBadge(resultBadge, result.severity)
-  resultCard.className = "result-card"
-  resultCard.innerHTML = `
+  setBadge(dom.resultBadge, result.severity)
+  dom.resultCard.className = "result-card"
+  dom.resultCard.innerHTML = `
     <div class="result-head">
       ${imageMarkup(result.duty.icon, result.duty.label, "duty-icon")}
       <div>
@@ -399,22 +393,19 @@ function deltaChips(delta, meta) {
 }
 
 function renderPressure() {
-  const type = document.getElementById("pressureType")
-  const card = document.getElementById("pressureCard")
-
   if (!state.pressure) {
-    type.className = "status-badge"
-    type.textContent = "待命"
-    card.className = "empty-state"
-    card.textContent = "执行值勤后先观察随机事件；连续行动或资源压力上升后，会出现应急补给预览。"
+    dom.pressureType.className = "status-badge"
+    dom.pressureType.textContent = "待命"
+    dom.pressureCard.className = "empty-state"
+    dom.pressureCard.textContent = "执行值勤后先观察随机事件；连续行动或资源压力上升后，会出现应急补给预览。"
     return
   }
 
   if (state.pressure.kind === "event") {
-    type.className = "status-badge warning"
-    type.textContent = "随机事件"
-    card.className = "pressure-card"
-    card.innerHTML = `
+    dom.pressureType.className = "status-badge warning"
+    dom.pressureType.textContent = "随机事件"
+    dom.pressureCard.className = "pressure-card"
+    dom.pressureCard.innerHTML = `
       ${imageMarkup(state.pressure.image, state.pressure.title, "event-image")}
       <div>
         <span class="pressure-title">${state.pressure.title}</span>
@@ -427,10 +418,10 @@ function renderPressure() {
     return
   }
 
-  type.className = "status-badge danger"
-  type.textContent = "应急补给"
-  card.className = "pressure-card"
-  card.innerHTML = `
+  dom.pressureType.className = "status-badge danger"
+  dom.pressureType.textContent = "应急补给"
+  dom.pressureCard.className = "pressure-card"
+  dom.pressureCard.innerHTML = `
     ${imageMarkup(emergencyOffer.image, emergencyOffer.title, "offer-image")}
     <div>
       <span class="pressure-title">${emergencyOffer.title}</span>
@@ -444,8 +435,7 @@ function renderPressure() {
 }
 
 function renderLogs() {
-  const list = document.getElementById("logList")
-  list.innerHTML = state.logs.slice(0, 6).map((item, index) => `
+  dom.logList.innerHTML = state.logs.slice(0, 6).map((item, index) => `
     <article class="log-item">
       <div class="log-meta">#${state.logs.length - index} · ${item.type}</div>
       <div class="log-title">${item.text}</div>
@@ -460,31 +450,14 @@ function renderAll() {
   renderResult()
   renderPressure()
   renderLogs()
-  bindDynamicEvents()
-}
-
-function bindDynamicEvents() {
-  document.querySelectorAll(".survivor-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      state.selectedSurvivorId = card.dataset.survivorId
-      renderAll()
-    })
-  })
-
-  document.querySelectorAll(".duty-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      state.selectedDutyType = card.dataset.dutyType
-      renderAll()
-    })
-  })
-
-  document.querySelectorAll("img").forEach((image) => {
-    image.addEventListener("error", handleImageError, { once: true })
-  })
 }
 
 function handleImageError(event) {
-  const image = event.currentTarget
+  const image = event.target
+  if (!image || image.tagName !== "IMG") {
+    return
+  }
+
   const frame = image.parentElement
 
   if (frame) {
@@ -610,11 +583,53 @@ function resetDemo() {
   renderAll()
 }
 
+function cacheDomElements() {
+  Object.assign(dom, {
+    recruitButton: document.getElementById("recruitButton"),
+    assignButton: document.getElementById("assignButton"),
+    resetButton: document.getElementById("resetButton"),
+    resourceGrid: document.getElementById("resourceGrid"),
+    pressureBadge: document.getElementById("pressureBadge"),
+    survivorList: document.getElementById("survivorList"),
+    selectedBadge: document.getElementById("selectedBadge"),
+    teamHint: document.getElementById("teamHint"),
+    dutyOptions: document.getElementById("dutyOptions"),
+    resultCard: document.getElementById("resultCard"),
+    resultBadge: document.getElementById("resultBadge"),
+    pressureType: document.getElementById("pressureType"),
+    pressureCard: document.getElementById("pressureCard"),
+    logList: document.getElementById("logList")
+  })
+}
+
+function handleSurvivorSelection(event) {
+  const card = event.target.closest(".survivor-card")
+  if (!card || !dom.survivorList.contains(card)) {
+    return
+  }
+
+  state.selectedSurvivorId = card.dataset.survivorId
+  renderAll()
+}
+
+function handleDutySelection(event) {
+  const card = event.target.closest(".duty-card")
+  if (!card || !dom.dutyOptions.contains(card)) {
+    return
+  }
+
+  state.selectedDutyType = card.dataset.dutyType
+  renderAll()
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("recruitButton").addEventListener("click", recruitSurvivor)
-  document.getElementById("assignButton").addEventListener("click", assignDuty)
-  document.getElementById("resetButton").addEventListener("click", resetDemo)
-  document.getElementById("pressureCard").addEventListener("click", (event) => {
+  cacheDomElements()
+  dom.recruitButton.addEventListener("click", recruitSurvivor)
+  dom.assignButton.addEventListener("click", assignDuty)
+  dom.resetButton.addEventListener("click", resetDemo)
+  dom.survivorList.addEventListener("click", handleSurvivorSelection)
+  dom.dutyOptions.addEventListener("click", handleDutySelection)
+  dom.pressureCard.addEventListener("click", (event) => {
     const action = event.target.dataset.action
 
     if (action === "resolve-event") {
@@ -625,6 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeOffer()
     }
   })
+  document.addEventListener("error", handleImageError, true)
 
   renderAll()
 })

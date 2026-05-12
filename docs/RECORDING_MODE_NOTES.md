@@ -16,14 +16,14 @@
 
 ## 本地限定
 
-录制模式只通过 `/api/dev/demo-mode` 的本地调试入口使用。
+录制模式通过 `/api/dev/demo-mode` 的本地调试入口使用。
 
 接口仍受本地开发校验限制：
 
 - 请求必须来自 `localhost`、`127.0.0.1` 或本机地址
-- 后端需要处于 debug / development / testing 状态，或显式设置 `WASTELAND_ENABLE_DEV_TOOLS=1`
+- 后端需要处于调试、开发或测试状态，或显式设置 `WASTELAND_ENABLE_DEV_TOOLS=1`
 
-它不应该出现在生产 UI，也不代表正式玩法功能。
+它用于本地截图和录屏，不进入正式玩法界面。
 
 ## 不代表生产玩法
 
@@ -36,7 +36,7 @@
 - 应急补给触发逻辑
 - 数据库 schema
 
-录制状态只是本地截图夹具，不应作为生产玩法或数值平衡依据。
+录制状态是本地截图夹具，不作为正式玩法或数值平衡依据。
 
 ## 使用方式
 
@@ -46,7 +46,7 @@
 python backend/app.py
 ```
 
-如果后端不是 debug 模式，可以显式启用本地调试工具：
+如果后端未处于调试模式，可以显式启用本地调试工具：
 
 ```bash
 WASTELAND_ENABLE_DEV_TOOLS=1 python backend/app.py
@@ -71,9 +71,9 @@ curl -X POST http://localhost:5001/api/dev/demo-mode \
 
 录制状态会带一个待处理事件。如果需要继续录制新的招募或值勤操作，先在首页处理事件，再进行后续操作。
 
-## 不要提交的文件
+## 本地文件提交提醒
 
-录制模式会改写本地数据库内容。以下文件或目录不要提交：
+录制模式会改写本地数据库内容。以下文件或目录保留在本地：
 
 - `backend/data/game.db`
 - `backend/data/backups/`
